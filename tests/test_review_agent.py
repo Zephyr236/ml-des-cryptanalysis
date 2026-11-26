@@ -265,6 +265,7 @@ def test_main_allows_claude_with_explicit_opt_in(monkeypatch, tmp_path):
     monkeypatch.delenv("OPENCODE_API_KEY", raising=False)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic")
     monkeypatch.setenv("ALLOW_TOOL_TRANSPORT", "1")
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "workflow_dispatch")
     _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
     monkeypatch.setattr(sys, "argv", ["review_agent.py"])
 
