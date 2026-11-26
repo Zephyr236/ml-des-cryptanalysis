@@ -205,8 +205,12 @@ result establishes that the learning pipeline is real at 2 rounds.
   random verification blocks; the key is unique up to the eight DES
   parity bits.  Compute: 323M chosen pairs, 1116 s data generation,
   48,896 candidate master keys (256 combinations × 256 completions),
-  one RTX 2060.  The top-2 protocol is fixed for the statistic, not
-  chosen per key.
+  one RTX 2060.  The top-2 protocol is fixed for the statistic, not chosen per key:
+  for a fixed S-box input difference `a`, candidates `k` and `k xor a`
+  swap the two S-box inputs and produce the same output difference, so
+  every true chunk has exactly one algebraic dual at rank 1.5.  Top-1
+  cannot succeed; top-2 plus the key schedule and re-encryption
+  resolves the dual.
 - Neural 6-round chunk-scorer and PairCNN distinguisher training did not
   move above chance in early evaluations; this negative scaling result
   is recorded in ADR-0010.
