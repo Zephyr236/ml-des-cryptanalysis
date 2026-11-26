@@ -15,6 +15,7 @@ with every trail.  See ADR-0009.
 from __future__ import annotations
 
 import math
+import random
 from dataclasses import dataclass
 
 import numpy as np
@@ -28,6 +29,7 @@ __all__ = [
     "search",
     "reconstruct",
     "single_bit_starts",
+    "multi_bit_starts",
     "sbox_input_differences",
     "expand_node",
     "shuffled_ddt",
@@ -162,12 +164,14 @@ def search(
     branch: int = 4,
     combos: int = 12,
     ddt=None,
-) -> tuple[dict[int, _Node], dict[int, _Node]]:
-    """Return ``(best, best_active)`` per round.
+) -> tuple[dict[int, _Node], dict[int, _Node], dict[int, _Node]]:
+    """Return ``(best, best_active, best_full_active)`` per round.
 
     ``best`` may be a trivial trail with no active S-boxes (one round of
     deterministic Feistel propagation); ``best_active`` requires at least
-    one active S-box and is the trail used for key-recovery work.
+    one active S-box; ``best_full_active`` additionally requires all eight
+    S-boxes of the next round to be active, which is what a single-trail
+    last-round key recovery needs to constrain every 6-bit chunk.
     """
     if not start_states:
         raise ValueError("at least one start state is required")
@@ -175,6 +179,7 @@ def search(
     nodes = [_Node(0.0, left & MASK32, right & MASK32, None, None) for left, right in start_states]
     best: dict[int, _Node] = {}
     best_active: dict[int, _Node] = {}
+    best_full_active: dict[int, _Node] = {}
     for round_index in range(1, rounds + 1):
         candidates: dict[tuple[int, int], _Node] = {}
         for node in nodes:
@@ -192,7 +197,11 @@ def search(
             if _has_active_step(node):
                 best_active[round_index] = node
                 break
-    return best, best_active
+        for node in nodes:
+            if all(sbox_input_differences(node.right)):
+                best_full_active[round_index] = node
+                break
+    return best, best_active, best_full_active
 
 
 def reconstruct(node: _Node) -> Trail:
@@ -217,3 +226,17 @@ def single_bit_starts() -> list[tuple[int, int]]:
         states.append((0, 1 << bit))
         states.append((1 << bit, 0))
     return states
+
+
+def multi_bit_starts(seed: int = 0, random_count: int = 256) -> list[tuple[int, int]]:
+    """Single-bit starts plus all two-bit and random 32-bit differences."""
+    states = set(single_bit_starts())
+    for first in range(32):
+        for second in range(first + 1, 32):
+            mask = (1 << first) | (1 << second)
+            states.add((0, mask))
+            states.add((mask, 0))
+    rng = random.Random(seed)
+    for _ in range(random_count):
+        states.add((rng.getrandbits(32), rng.getrandbits(32)))
+    return sorted(states)

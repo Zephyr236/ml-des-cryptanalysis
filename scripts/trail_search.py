@@ -28,6 +28,7 @@ from des_ml.des_torch import des_encrypt_states_torch, rand64  # noqa: E402
 from des_ml.manifest import RunWriter, update_latest  # noqa: E402
 from des_ml.theory.trails import (  # noqa: E402
     Trail,
+    multi_bit_starts,
     reconstruct,
     search,
     shuffled_ddt,
@@ -125,13 +126,16 @@ def main() -> int:
         tags={"stage": "stage1", "kind": "trail-search"},
     )
 
-    starts = single_bit_starts()
+    if config.get("starts", "single_bit") == "multi_bit":
+        starts = multi_bit_starts(seed, int(config.get("random_starts", 256)))
+    else:
+        starts = single_bit_starts()
     max_rounds = int(config["max_rounds"])
     beam = int(config.get("beam", 2000))
     branch = int(config.get("branch", 4))
     combos = int(config.get("combos", 12))
     search_start = time.perf_counter()
-    best, best_active = search(
+    best, best_active, best_full_active = search(
         starts, max_rounds, beam=beam, branch=branch, combos=combos
     )
     search_seconds = time.perf_counter() - search_start
@@ -151,6 +155,9 @@ def main() -> int:
         "best": {str(r): trail_to_dict(reconstruct(node)) for r, node in best.items()},
         "best_active": {
             str(r): trail_to_dict(reconstruct(node)) for r, node in best_active.items()
+        },
+        "best_full_active": {
+            str(r): trail_to_dict(reconstruct(node)) for r, node in best_full_active.items()
         },
     }
     (writer.path / "trails.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -173,6 +180,11 @@ def main() -> int:
         metrics[f"best_active_log2_probability_r{r}"] = trail.log2_probability
         metrics[f"best_active_probability_r{r}"] = trail.probability
     metrics["best_active_rounds"] = float(len(best_active))
+    for r, node in best_full_active.items():
+        trail = reconstruct(node)
+        metrics[f"best_full_active_log2_probability_r{r}"] = trail.log2_probability
+        metrics[f"best_full_active_probability_r{r}"] = trail.probability
+    metrics["best_full_active_rounds"] = float(len(best_full_active))
 
     # Power analysis: a trail is only useful downstream when N*p gives
     # enough right pairs.  Record both the expected count at the current
@@ -193,7 +205,7 @@ def main() -> int:
     if sensitivity_beams or sensitivity_branches or sensitivity_combos:
         sensitivity_start = time.perf_counter()
         for sensitivity_beam in sensitivity_beams:
-            _, active = search(
+            _, active, _ = search(
                 starts, max_rounds, beam=sensitivity_beam, branch=branch, combos=combos
             )
             entry = {str(r): reconstruct(node).log2_probability for r, node in active.items()}
@@ -203,7 +215,7 @@ def main() -> int:
                     reconstruct(node).log2_probability
                 )
         for sensitivity_branch in sensitivity_branches:
-            _, active = search(
+            _, active, _ = search(
                 starts, max_rounds, beam=beam, branch=sensitivity_branch, combos=combos
             )
             entry = {str(r): reconstruct(node).log2_probability for r, node in active.items()}
@@ -213,7 +225,7 @@ def main() -> int:
                     reconstruct(node).log2_probability
                 )
         for sensitivity_combo in sensitivity_combos:
-            _, active = search(
+            _, active, _ = search(
                 starts, max_rounds, beam=beam, branch=branch, combos=sensitivity_combo
             )
             entry = {str(r): reconstruct(node).log2_probability for r, node in active.items()}
@@ -231,7 +243,7 @@ def main() -> int:
     if control_cfg.get("shuffled_ddt"):
         control_start = time.perf_counter()
         control_ddt = shuffled_ddt(int(control_cfg.get("seed", 7)))
-        _, control_active = search(
+        _, control_active, _ = search(
             starts,
             max_rounds,
             beam=beam,
