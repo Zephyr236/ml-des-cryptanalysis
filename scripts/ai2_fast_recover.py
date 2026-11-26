@@ -88,7 +88,7 @@ def main() -> int:
     cipher_batched = verifier_cipher.unsqueeze(0)
     found = None
     tried = 0
-    for assignment, mask in enumerate(masks):
+    for mask in masks:
         keys = base_tensor | mask
         outputs = des_encrypt_torch(
             plain_batched, keys.repeat_interleave(4), args.rounds
