@@ -129,9 +129,11 @@ def main() -> int:
     train_cfg = config["train"]
     seed = int(args.seed if args.seed is not None else train_cfg.get("seed", 0))
     steps = int(args.max_steps if args.max_steps is not None else train_cfg["steps"])
-    device = torch.device(
-        args.device or train_cfg.get("device") or ("cuda" if torch.cuda.is_available() else "cpu")
-    )
+    requested = args.device or train_cfg.get("device")
+    if requested in (None, "auto"):
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    else:
+        device = torch.device(requested)
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
