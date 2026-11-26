@@ -26,6 +26,7 @@ from .ddt import ddt_tables
 __all__ = [
     "TrailStep",
     "Trail",
+    "SearchResult",
     "search",
     "reconstruct",
     "single_bit_starts",
@@ -69,6 +70,15 @@ class _Node:
     right: int
     parent: _Node | None
     step: TrailStep | None
+
+
+@dataclass
+class SearchResult:
+    best: dict[int, _Node]
+    best_active: dict[int, _Node]
+    best_full_active: dict[int, _Node]
+    best_zero_right: dict[int, _Node]
+    best_zero_right_full: dict[int, _Node]
 
 
 def sbox_input_differences(right: int) -> tuple[int, ...]:
@@ -164,22 +174,21 @@ def search(
     branch: int = 4,
     combos: int = 12,
     ddt=None,
-) -> tuple[dict[int, _Node], dict[int, _Node], dict[int, _Node]]:
-    """Return ``(best, best_active, best_full_active)`` per round.
+) -> SearchResult:
+    """Return the best trails found per round.
 
-    ``best`` may be a trivial trail with no active S-boxes (one round of
-    deterministic Feistel propagation); ``best_active`` requires at least
-    one active S-box; ``best_full_active`` additionally requires all eight
-    S-boxes of the next round to be active, which is what a single-trail
-    last-round key recovery needs to constrain every 6-bit chunk.
+    ``best`` may be trivial; ``best_active`` requires an active S-box;
+    ``best_full_active`` activates all eight S-boxes of the next round.
+    ``best_zero_right`` ends with ``R_r = 0``, so one more round is
+    deterministic; ``best_zero_right_full`` additionally makes ``L_r``
+    activate all eight S-boxes, giving a 5-round characteristic with the
+    same probability as the 4-round trail for a 6-round attack.
     """
     if not start_states:
         raise ValueError("at least one start state is required")
     ddt = ddt_tables() if ddt is None else ddt
     nodes = [_Node(0.0, left & MASK32, right & MASK32, None, None) for left, right in start_states]
-    best: dict[int, _Node] = {}
-    best_active: dict[int, _Node] = {}
-    best_full_active: dict[int, _Node] = {}
+    result = SearchResult({}, {}, {}, {}, {})
     for round_index in range(1, rounds + 1):
         candidates: dict[tuple[int, int], _Node] = {}
         for node in nodes:
@@ -192,16 +201,19 @@ def search(
         nodes = sorted(candidates.values(), key=lambda node: node.log2p, reverse=True)[:beam]
         if not nodes:
             break
-        best[round_index] = nodes[0]
+        result.best[round_index] = nodes[0]
         for node in nodes:
-            if _has_active_step(node):
-                best_active[round_index] = node
-                break
-        for node in nodes:
-            if all(sbox_input_differences(node.right)):
-                best_full_active[round_index] = node
-                break
-    return best, best_active, best_full_active
+            if round_index not in result.best_active and _has_active_step(node):
+                result.best_active[round_index] = node
+            if round_index not in result.best_full_active and all(
+                sbox_input_differences(node.right)
+            ):
+                result.best_full_active[round_index] = node
+            if round_index not in result.best_zero_right and node.right == 0 and node.left:
+                result.best_zero_right[round_index] = node
+                if all(sbox_input_differences(node.left)):
+                    result.best_zero_right_full[round_index] = node
+    return result
 
 
 def reconstruct(node: _Node) -> Trail:

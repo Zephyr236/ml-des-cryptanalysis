@@ -97,7 +97,7 @@ def test_search_one_round_matches_ddt_maximum():
     for j, difference in enumerate(sbox_input_differences(right)):
         if difference:
             expected += math.log2(int(DDT[j, difference].max()) / 64.0)
-    _, best_active, _ = search([(0, right)], 1, beam=50, branch=16, combos=64)
+    best_active = search([(0, right)], 1, beam=50, branch=16, combos=64).best_active
     assert 1 in best_active
     trail = reconstruct(best_active[1])
     assert trail.log2_probability == pytest.approx(expected)
@@ -105,7 +105,7 @@ def test_search_one_round_matches_ddt_maximum():
 
 
 def test_input_difference_roundtrip():
-    _, best_active, _ = search(single_bit_starts(), 2, beam=200, branch=4, combos=12)
+    best_active = search(single_bit_starts(), 2, beam=200, branch=4, combos=12).best_active
     trail = reconstruct(best_active[2])
     state = permute(trail.input_difference, IP, 64)
     assert ((state >> 32) & MASK32, state & MASK32) == trail.start

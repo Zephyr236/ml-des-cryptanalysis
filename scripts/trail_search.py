@@ -135,9 +135,12 @@ def main() -> int:
     branch = int(config.get("branch", 4))
     combos = int(config.get("combos", 12))
     search_start = time.perf_counter()
-    best, best_active, best_full_active = search(
-        starts, max_rounds, beam=beam, branch=branch, combos=combos
-    )
+    result = search(starts, max_rounds, beam=beam, branch=branch, combos=combos)
+    best = result.best
+    best_active = result.best_active
+    best_full_active = result.best_full_active
+    best_zero_right = result.best_zero_right
+    best_zero_right_full = result.best_zero_right_full
     search_seconds = time.perf_counter() - search_start
 
     payload = {
@@ -158,6 +161,12 @@ def main() -> int:
         },
         "best_full_active": {
             str(r): trail_to_dict(reconstruct(node)) for r, node in best_full_active.items()
+        },
+        "best_zero_right": {
+            str(r): trail_to_dict(reconstruct(node)) for r, node in best_zero_right.items()
+        },
+        "best_zero_right_full": {
+            str(r): trail_to_dict(reconstruct(node)) for r, node in best_zero_right_full.items()
         },
     }
     (writer.path / "trails.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -185,6 +194,14 @@ def main() -> int:
         metrics[f"best_full_active_log2_probability_r{r}"] = trail.log2_probability
         metrics[f"best_full_active_probability_r{r}"] = trail.probability
     metrics["best_full_active_rounds"] = float(len(best_full_active))
+    for r, node in best_zero_right.items():
+        trail = reconstruct(node)
+        metrics[f"best_zero_right_log2_probability_r{r}"] = trail.log2_probability
+        metrics[f"best_zero_right_probability_r{r}"] = trail.probability
+    for r, node in best_zero_right_full.items():
+        trail = reconstruct(node)
+        metrics[f"best_zero_right_full_log2_probability_r{r}"] = trail.log2_probability
+    metrics["best_zero_right_full_rounds"] = float(len(best_zero_right_full))
 
     # Power analysis: a trail is only useful downstream when N*p gives
     # enough right pairs.  Record both the expected count at the current
@@ -205,9 +222,9 @@ def main() -> int:
     if sensitivity_beams or sensitivity_branches or sensitivity_combos:
         sensitivity_start = time.perf_counter()
         for sensitivity_beam in sensitivity_beams:
-            _, active, _ = search(
+            active = search(
                 starts, max_rounds, beam=sensitivity_beam, branch=branch, combos=combos
-            )
+            ).best_active
             entry = {str(r): reconstruct(node).log2_probability for r, node in active.items()}
             sensitivity[f"beam:{sensitivity_beam}"] = entry
             for r, node in active.items():
@@ -215,9 +232,9 @@ def main() -> int:
                     reconstruct(node).log2_probability
                 )
         for sensitivity_branch in sensitivity_branches:
-            _, active, _ = search(
+            active = search(
                 starts, max_rounds, beam=beam, branch=sensitivity_branch, combos=combos
-            )
+            ).best_active
             entry = {str(r): reconstruct(node).log2_probability for r, node in active.items()}
             sensitivity[f"branch:{sensitivity_branch}"] = entry
             for r, node in active.items():
@@ -225,9 +242,9 @@ def main() -> int:
                     reconstruct(node).log2_probability
                 )
         for sensitivity_combo in sensitivity_combos:
-            _, active, _ = search(
+            active = search(
                 starts, max_rounds, beam=beam, branch=branch, combos=sensitivity_combo
-            )
+            ).best_active
             entry = {str(r): reconstruct(node).log2_probability for r, node in active.items()}
             sensitivity[f"combos:{sensitivity_combo}"] = entry
             for r, node in active.items():
@@ -243,14 +260,14 @@ def main() -> int:
     if control_cfg.get("shuffled_ddt"):
         control_start = time.perf_counter()
         control_ddt = shuffled_ddt(int(control_cfg.get("seed", 7)))
-        _, control_active, _ = search(
+        control_active = search(
             starts,
             max_rounds,
             beam=beam,
             branch=branch,
             combos=combos,
             ddt=control_ddt,
-        )
+        ).best_active
         control = {
             str(r): reconstruct(node).log2_probability for r, node in control_active.items()
         }
