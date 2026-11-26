@@ -30,6 +30,7 @@ from des_ml.eval.ddt_rank import log_ddt_tensor, sample_keys, sbox_lut  # noqa: 
 from des_ml.key_schedule import recover_master_keys  # noqa: E402
 from des_ml.manifest import RunWriter, update_latest  # noqa: E402
 from des_ml.models.chunk_scorer import ChunkScorer, candidate_log_ddt  # noqa: E402
+from des_ml.models.chunk_scorer_legacy import LegacyChunkScorer  # noqa: E402
 from des_ml.train.train_chunk_scorer import make_batch  # noqa: E402
 
 
@@ -110,7 +111,12 @@ def main() -> int:
     generator = torch.Generator(device=device)
     generator.manual_seed(args.seed)
 
-    model = ChunkScorer(
+    model_class = (
+        LegacyChunkScorer
+        if "sbox_embedding.weight" in checkpoint["model"]
+        else ChunkScorer
+    )
+    model = model_class(
         hidden=int(config.get("model", {}).get("hidden", 256)),
         dropout=0.0,
         sbox_lut=sbox_lut(),
