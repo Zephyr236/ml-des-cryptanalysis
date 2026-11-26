@@ -45,6 +45,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 MAX_DIFF_CHARS = 90_000
 LABEL = "agent-review"
 ISSUE_MARKER = "<!-- des-review-agent -->"
+MAX_FINDING_ISSUES = 5
+MAX_RECOMMENDATION_ISSUES = 3
 
 OPENCODE_BASE_URL = os.environ.get(
     "OPENCODE_BASE_URL", "https://opencode.ai/inference/go/openai/v1"
@@ -386,7 +388,9 @@ def file_research_report(
 def file_recommendation(
     repo: str, token: str, recommendation: dict, pr_number: int, pr_title: str
 ) -> None:
-    title = _safe_title(recommendation.get("title", ""), "[research]", "recommendation")
+    title = _safe_title(
+        recommendation.get("title", ""), f"[research] PR #{pr_number}:", "recommendation"
+    )
     body = (
         f"Filed by the review agent from PR #{pr_number} ({pr_title}).\n\n"
         f"**Priority:** {recommendation.get('priority', '?')}  \n"
@@ -827,10 +831,14 @@ def main() -> int:
         except Exception as exc:  # noqa: BLE001 - issue filing is best effort
             print(f"could not file research report: {exc}", file=sys.stderr)
 
-    for recommendation in _dict_items(review.get("recommendations")):
-        if not (research_content and research_diff):
-            break
-        if recommendation.get("priority") in {"high", "medium"}:
+    if research_content and research_diff:
+        recommendations = [
+            rec
+            for rec in _dict_items(review.get("recommendations"))
+            if rec.get("priority") in {"high", "medium"}
+        ]
+        recommendations.sort(key=lambda rec: {"high": 0, "medium": 1}.get(rec.get("priority"), 2))
+        for recommendation in recommendations[:MAX_RECOMMENDATION_ISSUES]:
             try:
                 file_recommendation(
                     repo, token, recommendation, number, pr_info.get("title") or f"PR #{number}"
@@ -838,12 +846,17 @@ def main() -> int:
             except Exception as exc:  # noqa: BLE001
                 print(f"could not file recommendation: {exc}", file=sys.stderr)
 
-    for finding in _dict_items(review.get("findings")):
-        if finding.get("severity") in {"high", "medium"}:
-            try:
-                file_issue(repo, token, finding, number)
-            except urllib.error.HTTPError as exc:
-                print(f"could not file issue: HTTP {exc.code}", file=sys.stderr)
+    findings = [
+        finding
+        for finding in _dict_items(review.get("findings"))
+        if finding.get("severity") in {"high", "medium"}
+    ]
+    findings.sort(key=lambda finding: {"high": 0, "medium": 1}.get(finding.get("severity"), 2))
+    for finding in findings[:MAX_FINDING_ISSUES]:
+        try:
+            file_issue(repo, token, finding, number)
+        except urllib.error.HTTPError as exc:
+            print(f"could not file issue: HTTP {exc.code}", file=sys.stderr)
     print(f"review agent: {len(review.get('findings', []))} finding(s), verdict={review.get('verdict')}")
     return 0
 

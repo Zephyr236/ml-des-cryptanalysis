@@ -632,3 +632,20 @@ def test_main_skips_recs_for_non_research_diff(monkeypatch, tmp_path):
     assert review_agent.main() == 0
     assert reports == []
     assert recommendations == []
+
+
+def test_file_recommendation_title_includes_pr(monkeypatch):
+    captured = {}
+
+    def fake_create(repo, token, title, body, labels):
+        captured["title"] = title
+
+    monkeypatch.setattr(review_agent, "create_or_comment_issue", fake_create)
+    review_agent.file_recommendation(
+        "o/r",
+        "t",
+        {"priority": "high", "kind": "experiment", "title": "Do X", "detail": "d"},
+        7,
+        "PR",
+    )
+    assert captured["title"].startswith("[research] PR #7:")

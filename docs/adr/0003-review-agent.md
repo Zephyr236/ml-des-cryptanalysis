@@ -78,11 +78,13 @@ as issues.
    returns a `research_analysis` object (hypothesis, design, results,
    missing analyses, next experiments, confidence) and a prioritised
    `recommendations` list. For PRs touching `src/`, `configs/` or
-   `results/`, it files a `[research] PR #N analysis` issue containing the full
-   report, labelled `research-review` and `analysis`. High/medium
-   recommendations become separate `[research]` issues labelled
-   `recommendation`. Titles are deduplicated by exact match against open
-   issues; a missing label never loses the report.
+   `results/` where the model reports research content, it files a
+   `[research] PR #N analysis` issue containing the full report, labelled
+   `research-review` and `analysis`. High/medium recommendations become
+   separate `[research] PR #N: ...` issues labelled `recommendation`.
+   Titles are deduplicated by exact match against open issues created by
+   the agent; a missing label never loses the report. At most 5 code
+   findings and 3 recommendations are filed per review.
 
 ## Consequences
 
