@@ -27,6 +27,7 @@ __all__ = [
     "des_decrypt",
     "feistel",
     "permute",
+    "sbox_output",
     "SBOXES",
 ]
 
@@ -186,15 +187,29 @@ def key_schedule(key: int, rounds: int = DES_ROUNDS) -> list[int]:
     return subkeys
 
 
+def sbox_output(sbox_index: int, six_bits: int) -> int:
+    """Apply S-box ``sbox_index`` to a 6-bit input (row/column addressing).
+
+    ``SBOXES`` stores each box as 64 row-major entries indexed by
+    ``row * 16 + column``; the 6-bit input is **not** that index.  Every
+    S-box consumer must go through this function.
+    """
+    if not 0 <= sbox_index < 8:
+        raise ValueError("sbox_index must be in [0, 7]")
+    if not 0 <= six_bits < 64:
+        raise ValueError("six_bits must be a 6-bit integer")
+    row = ((six_bits & 0x20) >> 4) | (six_bits & 0x01)
+    column = (six_bits >> 1) & 0x0F
+    return SBOXES[sbox_index][row * 16 + column]
+
+
 def feistel(right: int, subkey: int) -> int:
     """The DES round function f(R, K)."""
     expanded = permute(right, E, 32) ^ subkey
     substituted = 0
     for box_index in range(8):
         six_bits = (expanded >> (42 - 6 * box_index)) & 0x3F
-        row = ((six_bits & 0x20) >> 4) | (six_bits & 0x01)
-        column = (six_bits >> 1) & 0x0F
-        substituted = (substituted << 4) | SBOXES[box_index][row * 16 + column]
+        substituted = (substituted << 4) | sbox_output(box_index, six_bits)
     return permute(substituted, P, 32)
 
 

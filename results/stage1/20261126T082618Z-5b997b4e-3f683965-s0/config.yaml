@@ -1,0 +1,27 @@
+suite: theory-core
+version: 1
+sboxes: 8
+ddt_shape:
+- 64
+- 16
+lat_shape:
+- 64
+- 16
+rounds:
+- 1
+- 2
+- 3
+- 4
+- 5
+- 6
+- 7
+- 8
+- 9
+- 10
+- 11
+- 12
+- 13
+- 14
+- 15
+- 16
+recovery_keys: 16

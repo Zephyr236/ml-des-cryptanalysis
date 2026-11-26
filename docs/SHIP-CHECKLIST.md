@@ -18,9 +18,9 @@ readiness without blocking day-to-day work.
 - [x] Result manifest schema and validator implemented
 - [x] Seven blocking CI gates wired
 - [x] Advisory review agent wired (Claude Agent SDK)
-- [ ] Branch protection enabled on `main` (after the bootstrap PR merges)
-- [ ] GPU host bootstrap reproduced from `scripts/remote/bootstrap.ps1`
-- [ ] First Stage 1 smoke run executed on the GPU host and committed
+- [x] Branch protection enabled on `main` (admins enforced; direct push rejected)
+- [x] GPU host bootstrap reproduced from `scripts/remote/bootstrap.ps1`
+- [x] First GPU smoke run executed on the host and committed
 
 ## Stage 1 — distinguisher
 

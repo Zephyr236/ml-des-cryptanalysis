@@ -22,6 +22,12 @@ tested against an external standard.
    rotation schedule are taken from FIPS PUB 46-3 and live only in
    `src/des_ml/des.py`. The PyTorch evaluator imports those tables; it
    does not duplicate them.
+   **S-box addressing:** each box is stored as 64 row-major entries
+   indexed by `row * 16 + column`. The 6-bit input is **not** that
+   index: row = bit 1 and bit 6, column = bits 2–5. Every consumer must
+   call `sbox_output`; using the raw 6-bit value as a list index is a
+   silent wrong-answer bug (it was caught by the theory-core tests and
+   is now a regression test).
 3. **Round count.** `r`-round DES executes the first `r` subkeys of the
    standard key schedule, performs the final L/R swap, and applies
    IP⁻¹. Decryption reverses the subkey order. This is the definition

@@ -18,7 +18,7 @@ reached ~27% recovery at 2 rounds and failed at 4) is archived at
 
 ## Status
 
-**Stage 0 — infrastructure.** The repository currently contains:
+**Stage 0 complete; theory core committed.** The repository currently contains:
 
 - a bit-exact reference DES with round-reduced variants
   ([`src/des_ml/des.py`](src/des_ml/des.py));
@@ -28,6 +28,8 @@ reached ~27% recovery at 2 rounds and failed at 4) is archived at
   ([`src/des_ml/data.py`](src/des_ml/data.py));
 - a residual CNN distinguisher and an MLP baseline
   ([`src/des_ml/models/pair_cnn.py`](src/des_ml/models/pair_cnn.py));
+- exact DDT/LAT tables, key-schedule coverage and last-round chunk algebra
+  ([`src/des_ml/theory/`](src/des_ml/theory), [`src/des_ml/last_round.py`](src/des_ml/last_round.py));
 - a training entry point that writes CI-verifiable result manifests
   ([`src/des_ml/train/train_distinguisher.py`](src/des_ml/train/train_distinguisher.py));
 - seven blocking CI gates plus a non-blocking LLM review agent
