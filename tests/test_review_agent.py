@@ -281,7 +281,7 @@ def test_main_allows_claude_with_explicit_opt_in(monkeypatch, tmp_path):
     assert "Claude Agent SDK" in posted[-1]
 
 
-def test_main_dry_run_disables_claude_without_posting(monkeypatch, tmp_path):
+def test_main_dry_run_disables_claude_without_posting(monkeypatch, tmp_path, capsys):
     monkeypatch.delenv("OPENCODE_ZEN_API_KEY", raising=False)
     monkeypatch.delenv("OPENCODE_API_KEY", raising=False)
     monkeypatch.delenv("ALLOW_TOOL_TRANSPORT", raising=False)
