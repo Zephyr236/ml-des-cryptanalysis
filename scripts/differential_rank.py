@@ -155,22 +155,20 @@ def main() -> int:
             verifier_plain, key_tensor.expand(4), args.rounds
         )
         found = None
+        verifier_plain_batched = verifier_plain.repeat(256)
+        verifier_cipher_batched = verifier_cipher.unsqueeze(0)
         for combo in itertools.product(*candidate_lists):
             round_key = sum(int(chunk) << (42 - 6 * j) for j, chunk in enumerate(combo))
-            for candidate in recover_master_keys(round_key, args.rounds):
-                signed_candidate = signed(candidate)
-                candidate_tensor = torch.tensor(
-                    [signed_candidate], dtype=torch.long, device=device
-                ).expand(4)
-                if bool(
-                    (
-                        des_encrypt_torch(verifier_plain, candidate_tensor, args.rounds)
-                        == verifier_cipher
-                    ).all()
-                ):
-                    found = candidate
-                    break
-            if found is not None:
+            candidates = recover_master_keys(round_key, args.rounds)
+            keys = torch.tensor(
+                [signed(value) for value in candidates], dtype=torch.long, device=device
+            )
+            outputs = des_encrypt_torch(verifier_plain_batched, keys.repeat_interleave(4), args.rounds).reshape(
+                len(candidates), 4
+            )
+            matched = (outputs == verifier_cipher_batched).all(dim=1)
+            if bool(matched.any()):
+                found = candidates[int(torch.nonzero(matched)[0].item())]
                 break
         recovered = found is not None
         details["master_key"] = f"0x{found:016X}" if found is not None else ""
