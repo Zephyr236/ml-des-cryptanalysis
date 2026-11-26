@@ -1,3 +1,27 @@
+## 2026-11-26 — AI chunk scorer at 2 rounds; 6-round attack
+
+**2-round AI scorer.** Run `20261126T150811Z-fa7d0232-c7d52488-s0`:
+chunk accuracy 0.3906, top-5 0.7656, mean rank 9.19, versus the exact
+DDT counter at 0.0000 / 0.0371 / 33.62. Boxes 0,1,2,4,6,7 are mostly
+rank 1–2; boxes 3 and 5 remain weak, so full 2-round key recovery is not
+claimed from this checkpoint. The result establishes real AI signal at
+2 rounds.
+
+**6-round protocol.** Use the full-active 5-round trail
+(`ΔP=0x0000001010000000`, `p=2^-25.268`, last-round input differences
+`[8,1,19,48,8,4,2,32]`); filter pairs by that key-independent vector,
+rank the last-round chunks by exact log-DDT, take top-k, invert the key
+schedule and verify by re-encryption. The unfiltered 100M-pair baseline
+(run `20261126T154314Z-691eb843-fefdb8d2-s0`) gives ranks
+`[3,64,16,14.5,34,16,42,44]` (mean 29.19): partial box signal, no key.
+The filtered 323M-pair run is in progress; its count/ranks/key will be
+recorded in the merged result.
+
+**Negative AI scaling.** Six-round chunk-scorer and PairCNN
+distinguisher training did not move above chance in early evaluations.
+The 6-round key recovery therefore uses the DDT backbone; the neural
+scorer is the AI component at 2 rounds (ADR-0010).
+
 ## 2026-11-26 — TH-1 sensitivity, shuffled-DDT control and label fix
 
 **Sensitivity.** Beam width is not binding (500/2000/8000 identical).
