@@ -25,6 +25,7 @@ __all__ = [
     "key_schedule",
     "des_encrypt",
     "des_decrypt",
+    "des_encrypt_states",
     "feistel",
     "permute",
     "sbox_output",
@@ -233,3 +234,22 @@ def des_encrypt(block: int, key: int, rounds: int = DES_ROUNDS) -> int:
 def des_decrypt(block: int, key: int, rounds: int = DES_ROUNDS) -> int:
     """Decrypt one 64-bit block encrypted with ``rounds`` rounds."""
     return _crypt(block, list(reversed(key_schedule(key, rounds))))
+
+
+def des_encrypt_states(block: int, key: int, rounds: int = DES_ROUNDS) -> list[tuple[int, int]]:
+    """Return ``[(L0, R0), ..., (L_r, R_r)]`` for intermediate states.
+
+    The input state is ``IP(block) = L0 || R0``; each later pair is the
+    state after that many Feistel rounds.  This is the oracle used by the
+    differential-trail Monte Carlo validation.
+    """
+    if not 0 <= block < (1 << 64):
+        raise ValueError("block must be a 64-bit integer")
+    state = permute(block, IP, 64)
+    left = (state >> 32) & 0xFFFFFFFF
+    right = state & 0xFFFFFFFF
+    states = [(left, right)]
+    for subkey in key_schedule(key, rounds):
+        left, right = right, left ^ feistel(right, subkey)
+        states.append((left, right))
+    return states
