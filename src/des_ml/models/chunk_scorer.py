@@ -134,7 +134,7 @@ class ChunkScorer(nn.Module):
         stacked = torch.stack(logits, dim=2)  # (B, M, 8, 64)
         if return_per_pair:
             return stacked
-        return stacked.sum(dim=1)
+        return stacked.mean(dim=1)
 
 
 def candidate_log_ddt(

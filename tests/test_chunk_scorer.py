@@ -38,7 +38,7 @@ def test_chunk_scorer_shapes_and_ddt_initialisation():
         return_per_pair=True,
     )
     assert per_pair.shape == (4, 8, 8, 64)
-    assert torch.allclose(logits.detach(), ddt, atol=1e-6)
+    assert torch.allclose(logits.detach() * 8, ddt, atol=1e-6)
 
     truth = torch.stack(
         [

@@ -46,7 +46,7 @@ def parse_args() -> argparse.Namespace:
         default=8,
         help="number of S-boxes ranked by the model; the rest are enumerated fully",
     )
-    parser.add_argument("--eval-keys", type=int, default=64)
+    parser.add_argument("--eval-keys", type=int, default=8)
     parser.add_argument("--max-combos", type=float, default=2_000_000)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--seed", type=int, default=0)

@@ -188,7 +188,7 @@ def main() -> int:
                 pairs=int(train_cfg.get("pairs_per_key", 32)),
             )
             per_pair = model(p1, p2, c1, c2, return_per_pair=True)
-            logits = per_pair.sum(dim=1)
+            logits = per_pair.mean(dim=1)
             loss_listwise = F.cross_entropy(logits.reshape(-1, 64), truth.reshape(-1))
             expanded_truth = truth.unsqueeze(1).expand(-1, per_pair.shape[1], -1)
             loss_pair = F.cross_entropy(
