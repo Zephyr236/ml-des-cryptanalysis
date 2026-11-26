@@ -149,6 +149,10 @@ def main() -> int:
         "true_chunks": [int(value) for value in truth.tolist()],
         "ranks": [float(value) for value in ranks.tolist()],
     }
+    (writer.path / "scores.json").write_text(
+        json.dumps({"scores": scores.cpu().tolist(), "details": details}),
+        encoding="utf-8",
+    )
     recovered = False
     topk = torch.topk(scores, args.top_k, dim=1).indices
     candidate_lists = [topk[j].tolist() for j in range(8)]
@@ -180,11 +184,11 @@ def main() -> int:
         details["master_key"] = f"0x{found:016X}" if found is not None else ""
         details["combos_tried"] = combos
     metrics["recovered"] = float(recovered)
-
     (writer.path / "scores.json").write_text(
         json.dumps({"scores": scores.cpu().tolist(), "details": details}),
         encoding="utf-8",
     )
+
     writer.record(0, metrics)
     manifest = writer.finish(status="completed", final=metrics)
     if not args.no_latest:
