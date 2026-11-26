@@ -1,12 +1,12 @@
-# Stage C: look for a 5-round trail with all eight last-round S-boxes
-# active, using a multi-bit / random start set.
-run_name: six-round-trail-search
-max_rounds: 6
-beam: 8000
-branch: 4
-combos: 12
+# Stage C: wide search for a 5-round trail whose next-round state
+# activates all eight S-boxes (single-trail 6-round key recovery).
+run_name: six-round-wide-trail-search
+max_rounds: 5
+beam: 16000
+branch: 8
+combos: 32
 starts: multi_bit
-random_starts: 256
+random_starts: 4096
 seed: 0
 device: auto
 
