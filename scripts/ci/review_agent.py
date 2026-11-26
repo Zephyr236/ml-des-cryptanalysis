@@ -268,6 +268,10 @@ def file_issue(repo: str, token: str, finding: dict, pr_number: int) -> None:
     create_or_comment_issue(repo, token, title, body, [LABEL, finding["area"]])
 
 
+def _md_cell(value) -> str:
+    return _text(value).replace("\r", " ").replace("\n", " ").replace("|", "\\|")
+
+
 def _safe_title(text, prefix: str, fallback: str) -> str:
     clean = re.sub(r"\s+", " ", _text(text)).strip()
     if not clean:
@@ -344,8 +348,8 @@ def research_report_body(
         lines += ["| Priority | Kind | Recommendation | Detail |", "|---|---|---|---|"]
         for rec in recommendations:
             lines.append(
-                f"| {rec.get('priority', '?')} | {rec.get('kind', '?')} | "
-                f"{rec.get('title', '')} | {rec.get('detail', '')} |"
+                f"| {_md_cell(rec.get('priority', '?'))} | {_md_cell(rec.get('kind', '?'))} | "
+                f"{_md_cell(rec.get('title'))} | {_md_cell(rec.get('detail'))} |"
             )
     else:
         lines.append("(none)")
@@ -358,8 +362,8 @@ def research_report_body(
             if finding.get("line"):
                 location += f":{finding['line']}"
             lines.append(
-                f"| {finding.get('severity', '?')} | {finding.get('area', '?')} | "
-                f"`{location}` | {finding.get('title', '')} |"
+                f"| {_md_cell(finding.get('severity', '?'))} | {_md_cell(finding.get('area', '?'))} | "
+                f"`{_md_cell(location)}` | {_md_cell(finding.get('title'))} |"
             )
     else:
         lines.append("(none)")
@@ -451,8 +455,8 @@ def format_comment(review: dict, pr_number: int, backend: str) -> str:
         ]
         for rec in recommendations:
             lines.append(
-                f"| {rec.get('priority', '?')} | {rec.get('kind', '?')} | "
-                f"{rec.get('title', '')} |"
+                f"| {_md_cell(rec.get('priority', '?'))} | {_md_cell(rec.get('kind', '?'))} | "
+                f"{_md_cell(rec.get('title'))} |"
             )
         lines += ["", "**Recommendation details:**"]
         lines += [
@@ -474,8 +478,8 @@ def format_comment(review: dict, pr_number: int, backend: str) -> str:
             if finding.get("line"):
                 location += f":{finding['line']}"
             lines.append(
-                f"| {finding.get('severity', '?')} | {finding.get('area', '?')} | "
-                f"`{location}` | {finding.get('title', '')} |"
+                f"| {_md_cell(finding.get('severity', '?'))} | {_md_cell(finding.get('area', '?'))} | "
+                f"`{_md_cell(location)}` | {_md_cell(finding.get('title'))} |"
             )
         lines += ["", "Details and suggested changes are in the linked issues."]
     lines += [
@@ -630,10 +634,10 @@ def _diff_blocks(diff: str) -> list[tuple[str, str, bool]]:
         lines = block.splitlines()
         if not lines:
             continue
-        match = re.match(r"a/(\S+) b/(\S+)$", lines[0].strip())
+        match = re.match(r'"?a/(.+) "?b/(.+?)"?$', lines[0].strip())
         if not match:
             continue
-        old, new = match.groups()
+        old, new = (part.rstrip('"') for part in match.groups())
         deleted = any(line == "+++ /dev/null" for line in lines)
         entries.append((old, new, deleted))
     return entries
@@ -772,10 +776,10 @@ def main() -> int:
 
     diff = diff_path.read_text(encoding="utf-8", errors="ignore") if diff_path.exists() else ""
     pr_info = {
-        "title": pull.get("title", ""),
-        "body": pull.get("body") or "",
-        "head_sha": (pull.get("head") or {}).get("sha", ""),
-        "base_sha": (pull.get("base") or {}).get("sha", ""),
+        "title": _text(pull.get("title", "")),
+        "body": _text(pull.get("body")),
+        "head_sha": _text((pull.get("head") or {}).get("sha", "")),
+        "base_sha": _text((pull.get("base") or {}).get("sha", "")),
     }
     prompt = build_prompt(diff, pr_info)
     try:
@@ -807,7 +811,9 @@ def main() -> int:
     post_comment(repo, number, token, format_comment(review, number, backend))
 
     analysis = _as_dict(review.get("research_analysis"))
-    if analysis and analysis.get("research_content", True) is not False and is_research_diff(diff):
+    research_diff = is_research_diff(diff)
+    research_content = analysis.get("research_content", True) is not False
+    if analysis and research_content and research_diff:
         try:
             file_research_report(
                 repo,
@@ -821,9 +827,8 @@ def main() -> int:
         except Exception as exc:  # noqa: BLE001 - issue filing is best effort
             print(f"could not file research report: {exc}", file=sys.stderr)
 
-    research_content = analysis.get("research_content", True) is not False
     for recommendation in _dict_items(review.get("recommendations")):
-        if not research_content:
+        if not (research_content and research_diff):
             break
         if recommendation.get("priority") in {"high", "medium"}:
             try:

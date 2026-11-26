@@ -603,3 +603,32 @@ def test_safe_title_sanitizes_and_caps():
     assert "\n" not in title
     assert len(title) <= len("[review] ") + 120
     assert review_agent._safe_title("", "[review]", "fallback") == "[review] fallback"
+
+
+def test_md_cell_escapes_pipes_and_newlines():
+    assert review_agent._md_cell("a|b\nc") == "a\\|b c"
+
+
+def test_main_skips_recs_for_non_research_diff(monkeypatch, tmp_path):
+    monkeypatch.setenv("OPENCODE_ZEN_API_KEY", "test-key")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
+    _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
+    (tmp_path / "pr.diff").write_text(
+        "diff --git a/docs/REVIEW-AGENT.md b/docs/REVIEW-AGENT.md\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(sys, "argv", ["review_agent.py"])
+    monkeypatch.setattr(
+        review_agent, "call_opencode", lambda *a, **k: json.dumps(_research_review())
+    )
+    monkeypatch.setattr(review_agent, "post_comment", lambda *a, **k: None)
+    reports, recommendations = [], []
+    monkeypatch.setattr(
+        review_agent, "file_research_report", lambda *a, **k: reports.append(a)
+    )
+    monkeypatch.setattr(
+        review_agent, "file_recommendation", lambda *a, **k: recommendations.append(a)
+    )
+    assert review_agent.main() == 0
+    assert reports == []
+    assert recommendations == []
