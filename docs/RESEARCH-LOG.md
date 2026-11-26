@@ -1,3 +1,21 @@
+## 2026-11-26 — TH-1 sensitivity, shuffled-DDT control and label fix
+
+**Sensitivity.** Beam width is not binding (500/2000/8000 identical).
+branch=2 loses r4/r5; branch=8 matches branch=4. combos=4 loses r5;
+combos=32 improves r5 from `-27.694` to `-26.987` while r1–r4 are
+unchanged. The r3/r4 trails are stable; r5 is not converged at combos=12.
+
+**Control.** A shuffled-DDT table (row counts preserved, difference
+mapping destroyed) yields r3=`-2.678`, r4=`-5.356`, r5=`-5.356`, higher
+than DES. The search can exploit arbitrary high-probability rows, so the
+DES values reflect the actual S-box constraints. This is a table-level
+null; a random-S-box cipher control and a classical ceiling are still
+open (#65).
+
+**Label fix.** Prose uses 1-based labels S1..S8; `trails.json` arrays are
+0-based. The r=3 last-round vector `[0,8,0,0,0,0,0,8]` is therefore
+S2=8 and S8=8 (not S1/S7); the downstream filter targets S2 and S8.
+
 ## 2026-11-26 — TH-1 power analysis, beam sensitivity and r=4 validation
 
 **What.** Run `20261126T135943Z-30b315b1-1cc32a1a-s0` adds the power

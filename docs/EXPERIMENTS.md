@@ -103,12 +103,28 @@ only). The r=5 trail needs more than 2e9 pairs for 10 right pairs, so
 R=6 is out of scope at this budget. The earlier "candidate" language
 without these numbers was wrong.
 
-### Beam sensitivity
+### Search sensitivity and structural control
 
-The best-active log2 probability is identical at beams 500, 2000 and
-8000 for every R=1..5. The lower bound is stable under beam width, but
-branch/combos/start-set ablations and an exact/Matsui optimality
-comparison remain follow-ups (issue #65).
+Run `20261126T141734Z-7ec53b6a-669c7558-s0` adds branch, combos and
+control sweeps on the same trails.
+
+- **Beam width is not binding.** 500/2000/8000 give identical
+  best-active log2 probabilities for R=1..5.
+- **Branch/combos matter at R=5.** branch=2 loses r4/r5
+  (`-18.501`/`-31.565`); branch=8 matches branch=4. combos=4 loses r5
+  (`-30.606`); combos=32 improves r5 to `-26.987` while r1–r4 are
+  unchanged. The r3/r4 trails are stable; the r5 bound is not converged
+  at combos=12.
+- **Shuffled-DDT control.** Permuting each DDT row (preserving counts)
+  yields r3=`-2.678`, r4=`-5.356`, r5=`-5.356` — higher than the DES
+  values. The search can exploit arbitrary high-probability rows, so the
+  DES probabilities reflect the actual S-box constraints. This is a
+  table-level null, not a cipher; a random-S-box cipher control and a
+  classical/Matsui ceiling remain follow-ups (#65).
+
+**Code provenance.** The manifest `code_sha` is the code commit
+(`7ec53b6`); the results commit follows on the PR branch and changes only
+results and docs.
 
 ## Stage 2 — key recovery
 
