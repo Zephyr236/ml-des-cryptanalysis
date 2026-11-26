@@ -24,12 +24,13 @@ import torch
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from des_ml.data import SPLIT_TEST  # noqa: E402
+from des_ml.data import SPLIT_TEST, SPLIT_VAL  # noqa: E402
 from des_ml.des_torch import des_encrypt_torch, rand64  # noqa: E402
 from des_ml.eval.ddt_rank import log_ddt_tensor, sample_keys, sbox_lut  # noqa: E402
 from des_ml.key_schedule import recover_master_keys  # noqa: E402
 from des_ml.manifest import RunWriter, update_latest  # noqa: E402
 from des_ml.models.chunk_scorer import ChunkScorer  # noqa: E402
+from des_ml.train.train_chunk_scorer import make_batch  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
@@ -38,7 +39,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--out", default="results/stage2")
     parser.add_argument("--keys", type=int, default=8, help="target keys to attack")
     parser.add_argument("--pairs", type=int, default=None, help="pairs used for scoring")
-    parser.add_argument("--top", type=int, default=3, help="candidates per S-box")
+    parser.add_argument("--top", type=int, default=3, help="candidates per trusted S-box")
+    parser.add_argument(
+        "--known-boxes",
+        type=int,
+        default=8,
+        help="number of S-boxes ranked by the model; the rest are enumerated fully",
+    )
+    parser.add_argument("--eval-keys", type=int, default=64)
+    parser.add_argument("--max-combos", type=float, default=2_000_000)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--seed", type=int, default=0)
     return parser.parse_args()
@@ -108,7 +117,6 @@ def main() -> int:
     model.load_state_dict(checkpoint["model"])
     model.eval()
 
-    target_keys = sample_keys(args.keys, split=SPLIT_TEST, device="cpu")
     writer = RunWriter(
         stage_dir=REPO_ROOT / args.out,
         config={
@@ -116,6 +124,7 @@ def main() -> int:
             "keys": args.keys,
             "pairs": pairs,
             "top": args.top,
+            "known_boxes": args.known_boxes,
             "rounds": rounds,
         },
         config_path="scripts/chunk_key_recovery.py",
@@ -125,6 +134,25 @@ def main() -> int:
         tags={"stage": "stage2", "kind": "chunk-key-recovery", "rounds": rounds},
     )
 
+    @torch.no_grad()
+    def box_accuracy() -> list[float]:
+        p1, p2, c1, c2, truth = make_batch(
+            config,
+            split=SPLIT_VAL,
+            device=device,
+            generator=generator,
+            n_keys=args.eval_keys,
+            pairs=pairs,
+        )
+        logits = model(p1, p2, c1, c2)
+        correct = (logits.argmax(dim=-1) == truth).float().mean(dim=0)
+        return [float(value) for value in correct.tolist()]
+
+    box_acc = box_accuracy()
+    trusted = sorted(range(8), key=lambda j: box_acc[j], reverse=True)[: args.known_boxes]
+    writer.log(f"box_acc={box_acc} trusted={trusted}")
+
+    target_keys = sample_keys(args.keys, split=SPLIT_TEST, device="cpu")
     successes = 0
     details = []
     with torch.no_grad():
@@ -133,7 +161,16 @@ def main() -> int:
             p1, p2, c1, c2 = make_pairs(config, key_tensor, pairs, device, generator)
             logits = model(p1, p2, c1, c2)[0]  # (8, 64)
             top = torch.topk(logits, args.top, dim=-1).indices  # (8, top)
-            candidates_per_sbox = [top[j].tolist() for j in range(8)]
+            candidates_per_sbox = [
+                top[j].tolist() if j in trusted else list(range(64)) for j in range(8)
+            ]
+            combos = 1
+            for values in candidates_per_sbox:
+                combos *= len(values)
+            if combos > args.max_combos:
+                raise RuntimeError(
+                    f"candidate product {combos} exceeds --max-combos {args.max_combos}"
+                )
 
             verifier_plain = rand64(2, device=device, generator=generator)
             verifier_cipher = des_encrypt_torch(
@@ -178,9 +215,13 @@ def main() -> int:
         "keys": float(len(target_keys)),
         "pairs": float(pairs),
         "top": float(args.top),
+        "known_boxes": float(args.known_boxes),
         "rounds": float(rounds),
     }
-    (writer.path / "key_recovery.json").write_text(json.dumps(details, indent=2), encoding="utf-8")
+    (writer.path / "key_recovery.json").write_text(
+        json.dumps({"box_accuracy": box_acc, "trusted": trusted, "details": details}, indent=2),
+        encoding="utf-8",
+    )
     writer.record(0, metrics)
     manifest = writer.finish(status="completed", final=metrics)
     update_latest(REPO_ROOT / "results", writer.path, manifest)
