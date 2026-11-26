@@ -65,30 +65,50 @@ characteristic, not from an arbitrary delta.
 
 ## TH-1 trail search (2026-11-26)
 
-Beam search over all 64 single-bit start differences; `beam=2000`,
-`branch=4`, `combos=12`, best `active` trail per round. Run
-`20261126T135117Z-fc37e176-f9c5d98f-s0` on the RTX 2060 host.
+Beam search over all 64 single-bit start differences; `beam=8000`,
+`branch=4`, `combos=12`; best **active** trail per round. Run
+`20261126T135943Z-30b315b1-1cc32a1a-s0` on the RTX 2060 host. An earlier
+run (`20261126T135117Z-fc37e176-f9c5d98f-s0`) produced identical
+probabilities; the expanded run adds power, beam sensitivity and r=4
+validation.
 
-| Rounds | Best active log2 p | Probability | Last-round S-box inputs | Validation |
+| Rounds | Active log2 p | Probability | Last-round S-box inputs | Validation |
 |---|---|---|---|---|
-| 1 | -2.000 | 0.25 | S5=8 | 0.25028 vs 0.25 (n=100k) |
-| 2 | -2.000 | 0.25 | S5=8 | 0.24907 vs 0.25 (n=500k) |
-| 3 | -7.093 | 0.00732 | S1=8, S7=8 | 0.007316 vs 0.007324 (n=1M) |
-| 4 | -17.642 | 4.89e-6 | S2=5, S3=16, S6=7, S7=48 | not sampled |
+| 1 | -2.000 | 0.25 | S5=8 | 0.25028, CI [0.2476, 0.2530], n=100k |
+| 2 | -2.000 | 0.25 | S5=8 | 0.24907, CI [0.2479, 0.2503], n=500k |
+| 3 | -7.093 | 0.00732 | S1=8, S7=8 | 0.007316, CI [0.007151, 0.007485], n=1M |
+| 4 | -17.642 | 4.89e-6 | S2=5, S3=16, S6=7, S7=48 | 5.10e-6, CI [4.20e-6, 6.19e-6], n=20M |
 | 5 | -27.694 | 4.60e-9 | S1=10, S2=32, S5=3, S6=52 | not sampled |
 
-The r=1 overall `best` is a trivial probability-1 trail with no active
-S-box; it is reported separately and is not used for a distinguisher.
-The r=3 trail has input difference `0x1000`, probability `2^-7.093`, and
-last-round input-difference vector `[0, 8, 0, 0, 0, 0, 0, 8]`; it is the
-first candidate for a characteristic-filtered rank attack on 4 rounds.
-The r=4 trail (`ΔP=0x10000`, `2^-17.642`) is the candidate for 5 rounds.
-The r=5 trail is too weak (`2^-27.694`) for a feasible R=6 attack at this
-pair budget; a wider start set or a better search is a separate
-experiment.
+S-box labels are 0-based array indices (`S1=0, ..., S8=7`). The r=1
+overall `best` is a trivial probability-1 trail with no active S-box; it
+is reported separately and is not used as a distinguisher.
 
-**Caveat.** Beam search is a lower bound: these are the best trails found
-under the recorded parameters, not proofs of optimality (ADR-0009).
+### Power / pair budget
+
+At the existing 64-pairs/key DDT budget, `N*p` is:
+
+| Rounds | p | E[right pairs at 64] | Pairs for 10 | Pairs for 100 |
+|---|---|---|---|---|
+| 1 | 0.25 | 16 | 40 | 400 |
+| 2 | 0.25 | 16 | 40 | 400 |
+| 3 | 0.00732 | 0.469 | 1,366 | 13,654 |
+| 4 | 4.89e-6 | 3.13e-4 | 2,045,223 | 20,452,226 |
+| 5 | 4.60e-9 | 2.95e-7 | 2,171,874,821 | 21,718,748,203 |
+
+**Corrected framing.** The r=3 trail is a candidate for a 4-round attack
+only at roughly 1.4k–14k pairs/key, not at 64. The r=4 trail is a
+candidate for a 5-round attack at roughly 2M–20M pairs/key (small-scale
+only). The r=5 trail needs more than 2e9 pairs for 10 right pairs, so
+R=6 is out of scope at this budget. The earlier "candidate" language
+without these numbers was wrong.
+
+### Beam sensitivity
+
+The best-active log2 probability is identical at beams 500, 2000 and
+8000 for every R=1..5. The lower bound is stable under beam width, but
+branch/combos/start-set ablations and an exact/Matsui optimality
+comparison remain follow-ups (issue #65).
 
 ## Stage 2 — key recovery
 

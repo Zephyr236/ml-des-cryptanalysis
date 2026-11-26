@@ -1,3 +1,25 @@
+## 2026-11-26 — TH-1 power analysis, beam sensitivity and r=4 validation
+
+**What.** Run `20261126T135943Z-30b315b1-1cc32a1a-s0` adds the power
+table, a beam sweep and a 20M-sample validation of the r=4 trail.
+
+**Power.** At 64 pairs/key, E[right pairs] is 0.469 for r=3, 3.13e-4 for
+r=4 and 2.95e-7 for r=5. Pairs needed for 10 right pairs: 1,366 (r=3),
+2,045,223 (r=4), 2,171,874,821 (r=5). The r=3 trail is therefore a
+4-round candidate only at ~1.4k–14k pairs/key; the r=4 trail is a
+small-scale 5-round candidate; r=5/R=6 is out of scope. This corrects
+the underpowered "candidate" wording in the previous entry.
+
+**Validation.** r=4: empirical 5.10e-6 vs predicted 4.889e-6, Wilson CI
+[4.20e-6, 6.19e-6], n=20M, pass. r=1/2/3 still pass with CIs.
+
+**Sensitivity.** Best-active log2 p is identical at beams 500, 2000 and
+8000 for R=1..5. Beam width is not the bottleneck at this scale; the
+optimality/ceiling comparison is still open (#65).
+
+**Next.** Characteristic-filtered DDT rank at R=4 with the r=3 trail and
+~10k pairs/key for ~64 right pairs; compare against the chance baseline.
+
 ## 2026-11-26 — TH-1 differential trails found and validated
 
 **What.** Beam search over 64 single-bit start differences produced active
