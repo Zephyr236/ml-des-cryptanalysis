@@ -44,6 +44,8 @@ def main() -> int:
         help="comma-separated S-box indices to enumerate fully",
     )
     parser.add_argument("--max-combos", type=float, default=2_000_000)
+    parser.add_argument("--combo-start", type=int, default=0)
+    parser.add_argument("--combo-count", type=int, default=0)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--out", default="results/stage2")
@@ -87,6 +89,8 @@ def main() -> int:
             "top_k": args.top_k,
             "known_boxes": args.known_boxes,
             "full_boxes": args.full_boxes,
+            "combo_start": args.combo_start,
+            "combo_count": args.combo_count,
         },
         config_path="scripts/recover_from_scores.py",
         seed=args.seed,
@@ -97,7 +101,9 @@ def main() -> int:
 
     found = None
     tried = 0
-    for combo in itertools.product(*candidate_lists):
+    combos_iter = itertools.product(*candidate_lists)
+    stop = args.combo_start + args.combo_count if args.combo_count else None
+    for combo in itertools.islice(combos_iter, args.combo_start, stop):
         round_key = sum(int(chunk) << (42 - 6 * j) for j, chunk in enumerate(combo))
         candidates = recover_master_keys(round_key, args.rounds)
         keys = torch.tensor(
@@ -118,6 +124,8 @@ def main() -> int:
         "known_boxes": float(args.known_boxes),
         "combos": float(combos),
         "candidates_tried": float(tried),
+        "combo_start": float(args.combo_start),
+        "combo_count": float(args.combo_count),
         "recovered": float(found is not None),
     }
     writer.record(0, metrics)
