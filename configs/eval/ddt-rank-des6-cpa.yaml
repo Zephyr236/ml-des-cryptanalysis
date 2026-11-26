@@ -1,0 +1,9 @@
+# Exact log-DDT chunk-ranking baseline (TH-3 partial).
+# Rounds: 6; mode: CPA; 64 pairs under one key.
+run_name: ddt-rank-des6-cpa
+rounds: 6
+mode: cpa
+delta: 0x0000000000000001
+keys: 128
+pairs: 64
+seed: 0

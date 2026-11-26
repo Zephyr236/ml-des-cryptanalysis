@@ -1,0 +1,14 @@
+{
+  "delta_is_zero": 0.0,
+  "keys": 128.0,
+  "mean_rank": 33.6044921875,
+  "median_rank": 34.0,
+  "n_chunks": 1024.0,
+  "pairs_per_key": 64.0,
+  "random_mean_rank": 32.5,
+  "random_top1": 0.015625,
+  "rounds": 4.0,
+  "top1": 0.0146484375,
+  "top16": 0.2265625,
+  "top5": 0.068359375
+}

@@ -1,0 +1,30 @@
+{
+  "best": {
+    "delta_is_zero": 0.0,
+    "keys": 128.0,
+    "mean_rank": 32.40966796875,
+    "median_rank": 32.0,
+    "n_chunks": 1024.0,
+    "pairs_per_key": 64.0,
+    "random_mean_rank": 32.5,
+    "random_top1": 0.015625,
+    "rounds": 8.0,
+    "top1": 0.0107421875,
+    "top16": 0.251953125,
+    "top5": 0.0712890625
+  },
+  "final": {
+    "delta_is_zero": 0.0,
+    "keys": 128.0,
+    "mean_rank": 32.40966796875,
+    "median_rank": 32.0,
+    "n_chunks": 1024.0,
+    "pairs_per_key": 64.0,
+    "random_mean_rank": 32.5,
+    "random_top1": 0.015625,
+    "rounds": 8.0,
+    "top1": 0.0107421875,
+    "top16": 0.251953125,
+    "top5": 0.0712890625
+  }
+}

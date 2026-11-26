@@ -81,3 +81,14 @@ algebra and makes leakage harder to rule out.
   the cipher; kept only as ablation AB-5.
 - **Pure classical attack reproduction.** Useful as a ceiling, but it
   would not answer the research question about learned residuals.
+
+### Stage 1 ordering update (2026-11-26)
+
+A first exact log-DDT rank baseline with 64 unfiltered pairs and a
+one-bit delta is at chance for R=4/6/8 (mean rank ~32.5, top-1 ~1/64;
+runs recorded in `docs/EXPERIMENTS.md`). This does not test SPADE: the
+planned DG-4 uses the best available characteristic and right-pair
+filtering. It does establish two ordering constraints: TH-1 trail
+selection must precede DG-4, and every "no signal" result must state the
+delta, the filtering rule and the pair budget. An arbitrary delta is not
+a valid stand-in for a characteristic.

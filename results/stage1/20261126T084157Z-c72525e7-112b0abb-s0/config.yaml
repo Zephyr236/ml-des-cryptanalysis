@@ -1,0 +1,7 @@
+run_name: ddt-rank-des8-cpa
+rounds: 8
+mode: cpa
+delta: 1
+keys: 128
+pairs: 64
+seed: 0
