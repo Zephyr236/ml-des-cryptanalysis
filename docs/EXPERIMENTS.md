@@ -122,9 +122,17 @@ control sweeps on the same trails.
   table-level null, not a cipher; a random-S-box cipher control and a
   classical/Matsui ceiling remain follow-ups (#65).
 
-**Code provenance.** The manifest `code_sha` is the code commit
-(`7ec53b6`); the results commit follows on the PR branch and changes only
-results and docs.
+**Two-sided check.** The predicted probability lies inside every
+reported Wilson interval (r=1..4). The one-sided rule is the rejection
+criterion; the interval is the two-sided sanity check.
+
+**Run lineage.** `20261126T135117Z-fc37e176-f9c5d98f-s0` (beam 2000,
+r=1..3 validation) → `20261126T135943Z-30b315b1-1cc32a1a-s0` (beam 8000,
+power, beam sweep, r=4 validation) → `20261126T141734Z-7ec53b6a-669c7558-s0`
+(current headline: branch/combos and shuffled-DDT control; identical
+trails). All three manifests are committed; `LATEST.json` points at the
+last one. The manifest `code_sha` is the code commit; the results commit
+that follows contains only results and docs.
 
 ## Stage 2 — key recovery
 
