@@ -24,6 +24,17 @@ PR-controlled code. The base URL must be `https://opencode.ai/...` unless
 `OPENCODE_ALLOW_CUSTOM_BASE_URL=1` opts into a proxy, and cross-origin
 redirects are refused so the bearer token is never forwarded.
 
+The tool-enabled Claude transport is **disabled on
+`pull_request_target`**: Read/Grep/Glob plus an untrusted diff would let
+a prompt injection read files outside the repository and repeat them in
+a comment. PR reviews use the tool-less OpenCode transport; the Claude
+transport remains available for trusted dispatches.
+
+Manifest metrics are claims, not verified facts. The `results-gate`
+independently checks the manifest schema, `code_sha`, config hash and a
+clean tree; the reviewer must not treat `changed_by_pr` as proof of a
+result.
+
 ## Configuration
 
 | Variable | Default | Meaning |
@@ -54,4 +65,5 @@ visible in the diff.
 
 Any transport or parse error is caught, a short notice is posted, and the
 step exits 0. The deterministic gates (`ci`, `results-gate`, `issue-gate`,
-`adr-guard`, `link-check`, `release-blockers`) remain the authority.
+`adr-guard`, `adr-numbers`, `link-check`, `release-blockers`) remain the
+authority.

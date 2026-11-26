@@ -450,6 +450,27 @@ def main() -> int:
         return 0
 
     backend_kind = select_backend(opencode_key, anthropic_key, oauth_token)
+
+    # The Claude transport has Read/Grep/Glob. On pull_request_target the
+    # diff is untrusted PR content, and a prompt injection could ask the
+    # agent to read files outside the repository and repeat them in a
+    # comment. Only the tool-less OpenCode transport may review PRs.
+    if backend_kind == "claude" and os.environ.get("GITHUB_EVENT_NAME") == "pull_request_target":
+        if not dry_run:
+            post_comment(
+                repo,
+                number,
+                token,
+                "## Automated review (advisory)\n\n"
+                "Review agent skipped: the tool-enabled Claude transport is "
+                "disabled for `pull_request_target` because the diff is "
+                "untrusted. Configure `OPENCODE_ZEN_API_KEY` (tool-less "
+                "transport) or review a trusted event.\n\n"
+                "<sub>Non-blocking by design (ADR-0003).</sub>",
+            )
+        print("review agent: Claude transport disabled for pull_request_target")
+        return 0
+
     if backend_kind == "none":
         if not dry_run:
             post_comment(

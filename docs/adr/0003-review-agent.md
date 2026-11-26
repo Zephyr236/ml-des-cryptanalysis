@@ -42,6 +42,13 @@ as issues.
    OpenCode is used when its key is present, otherwise Claude. A failed
    OpenCode call posts a non-blocking notice; it does not silently retry
    through Claude.
+
+   The tool-enabled Claude transport is **disabled for
+   `pull_request_target` events**. The diff is untrusted PR content, and
+   Read/Grep/Glob could be prompt-injected into reading files outside the
+   repository and repeating them in a public comment. PR reviews run on
+   the tool-less OpenCode transport; Claude remains available for
+   trusted dispatches.
 3. **It can only comment and open issues.** The job is
    `continue-on-error: true`, the script always exits 0, and the check
    is deliberately absent from branch protection. This mirrors the
