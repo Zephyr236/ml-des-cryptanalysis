@@ -33,6 +33,7 @@ import asyncio
 import hashlib
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -51,7 +52,8 @@ OPENCODE_BASE_URL = os.environ.get(
 OPENCODE_MODEL = os.environ.get("OPENCODE_MODEL", "deepseek-v4.1-flash")
 try:
     # The 23k-character PR diff produced ~42k characters of reasoning and
-    # a 9k-character review; 32k tokens was truncated.
+    # a 9k-character review; a 32k-token budget was truncated, so the
+    # default is now 64k.
     OPENCODE_MAX_TOKENS = int(os.environ.get("OPENCODE_MAX_TOKENS", "64000"))
 except ValueError:
     OPENCODE_MAX_TOKENS = 64000
@@ -261,6 +263,22 @@ async def run_agent(prompt: str, model: str) -> str:
     return "\n".join(chunks)
 
 
+class _SameOriginRedirect(urllib.request.HTTPRedirectHandler):
+    """Refuse redirects that would forward the Authorization header elsewhere."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        old_host = urllib.parse.urlparse(req.full_url).hostname
+        new_host = urllib.parse.urlparse(newurl).hostname
+        if old_host != new_host:
+            raise urllib.error.HTTPError(
+                newurl, code, "cross-origin redirect refused", headers, fp
+            )
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_OPENER = urllib.request.build_opener(_SameOriginRedirect)
+
+
 def validate_base_url(url: str) -> str:
     """Refuse to send the API key anywhere except the OpenCode host.
 
@@ -312,7 +330,7 @@ def call_opencode(prompt: str, model: str, session: str, api_key: str) -> str:
             },
         )
         try:
-            with urllib.request.urlopen(request, timeout=900) as response:
+            with _OPENER.open(request, timeout=900) as response:
                 data = json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             if exc.code in {429, 500, 502, 503, 504} and attempt < 2:
@@ -356,25 +374,33 @@ def select_backend(opencode_key: str, anthropic_key: str, oauth_token: str) -> s
     return "none"
 
 
+def _changed_manifests(diff: str) -> set[str]:
+    return set(re.findall(r"^\+\+\+ b/(results/.*/manifest\.json)\s*$", diff, flags=re.M))
+
+
 def build_prompt(diff: str, pr: dict | None = None) -> str:
     pr = pr or {}
+    changed = _changed_manifests(diff)
     manifests: list[str] = []
     for path in sorted((REPO_ROOT / "results").rglob("manifest.json")):
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except Exception:
             continue
+        relative = str(path.relative_to(REPO_ROOT))
         manifests.append(
             json.dumps(
                 {
-                    "path": str(path.relative_to(REPO_ROOT)),
+                    "path": relative,
                     "run_id": data.get("run_id"),
+                    "schema_version": data.get("schema_version"),
                     "code_sha": data.get("code_sha"),
                     "git_dirty": data.get("git_dirty"),
                     "config_sha256": data.get("config_sha256"),
                     "seed": data.get("seed"),
                     "status": data.get("status"),
                     "tags": data.get("tags", {}),
+                    "changed_by_pr": relative in changed,
                     "metrics_final": data.get("metrics", {}).get("final", {}),
                     "metrics_best": data.get("metrics", {}).get("best", {}),
                 }
@@ -390,7 +416,8 @@ def build_prompt(diff: str, pr: dict | None = None) -> str:
     return (
         metadata
         + "Review this pull request.\n\n"
-        "Attached result manifests in the repository:\n"
+        "Result manifests already on the base branch. Only a manifest with "
+        "`changed_by_pr: true` is evidence for this PR; the rest are history:\n"
         + ("\n".join(manifests[:20]) if manifests else "(none)")
         + "\n\nUnified diff (truncated):\n```diff\n"
         + diff[:MAX_DIFF_CHARS]

@@ -55,7 +55,7 @@ def test_call_opencode_headers_payload_and_parse(monkeypatch):
         captured["payload"] = json.loads(request.data.decode("utf-8"))
         return FakeResponse(completion('{"summary":"ok","verdict":"sound","findings":[]}'))
 
-    monkeypatch.setattr(review_agent.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(review_agent._OPENER, "open", fake_urlopen)
     text = review_agent.call_opencode("review this", "deepseek-v4.1-flash", "session-1", "test-key")
 
     assert json.loads(text)["verdict"] == "sound"
@@ -79,7 +79,7 @@ def test_call_opencode_retries_transient_http_error(monkeypatch):
             raise urllib.error.HTTPError(request.full_url, 503, "unavailable", {}, None)
         return FakeResponse(completion('{"summary":"ok","verdict":"sound","findings":[]}'))
 
-    monkeypatch.setattr(review_agent.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(review_agent._OPENER, "open", fake_urlopen)
     monkeypatch.setattr(review_agent.time, "sleep", lambda _: None)
     text = review_agent.call_opencode("x", "m", "s", "k")
     assert "ok" in text
@@ -99,7 +99,7 @@ def test_call_opencode_rejects_truncated_nonempty_content(monkeypatch):
             }
         )
 
-    monkeypatch.setattr(review_agent.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(review_agent._OPENER, "open", fake_urlopen)
     with pytest.raises(RuntimeError, match="truncated"):
         review_agent.call_opencode("x", "m", "s", "k")
 
@@ -133,13 +133,14 @@ def test_build_prompt_includes_metrics_and_pr_metadata(monkeypatch, tmp_path):
     )
     monkeypatch.setattr(review_agent, "REPO_ROOT", tmp_path)
     prompt = review_agent.build_prompt(
-        "diff --git a/x b/x",
+        "diff --git a/x b/x\n+++ b/results/stage1/run-1/manifest.json\n",
         {"title": "T", "head_sha": "abc123", "base_sha": "def456", "body": "body"},
     )
     assert "metrics_final" in prompt
     assert "metrics_best" in prompt
     assert "head_sha: abc123" in prompt
     assert "splitmix64-v1" in prompt
+    assert '"changed_by_pr": true' in prompt
 
 
 def test_format_comment_names_backend():
@@ -148,3 +149,96 @@ def test_format_comment_names_backend():
     )
     assert "OpenCode Zen Go / deepseek-v4.1-flash" in text
     assert "PR #7" in text
+
+
+def test_cross_origin_redirect_refused():
+    import urllib.request
+
+    handler = review_agent._SameOriginRedirect()
+    request = urllib.request.Request(
+        "https://opencode.ai/inference/go/openai/v1/chat/completions",
+        headers={"Authorization": "Bearer secret"},
+    )
+    with pytest.raises(urllib.error.HTTPError):
+        handler.redirect_request(request, None, 302, "Found", {}, "https://evil.example/v1")
+
+
+def _event(tmp_path, number=7):
+    path = tmp_path / "event.json"
+    path.write_text(
+        json.dumps(
+            {
+                "pull_request": {
+                    "number": number,
+                    "title": "T",
+                    "body": "body",
+                    "head": {"sha": "a" * 40},
+                    "base": {"sha": "b" * 40, "ref": "main"},
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def _set_github_env(monkeypatch, tmp_path, event):
+    monkeypatch.setenv("GITHUB_EVENT_PATH", str(event))
+    monkeypatch.setenv("GITHUB_REPOSITORY", "o/r")
+    monkeypatch.setenv("GITHUB_TOKEN", "token")
+    diff = tmp_path / "pr.diff"
+    diff.write_text("diff --git a/x b/x\n", encoding="utf-8")
+    monkeypatch.setenv("PR_DIFF_PATH", str(diff))
+
+
+def test_main_dry_run_without_credentials_does_not_post(monkeypatch, tmp_path):
+    for key in (
+        "OPENCODE_ZEN_API_KEY",
+        "OPENCODE_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "CLAUDE_CODE_OAUTH_TOKEN",
+    ):
+        monkeypatch.delenv(key, raising=False)
+    _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
+    monkeypatch.setattr(sys, "argv", ["review_agent.py", "--dry-run"])
+    posted = []
+    monkeypatch.setattr(review_agent, "post_comment", lambda *a, **k: posted.append(a))
+    assert review_agent.main() == 0
+    assert posted == []
+
+
+def test_main_selects_opencode_and_posts(monkeypatch, tmp_path):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
+    monkeypatch.setenv("OPENCODE_ZEN_API_KEY", "test-key")
+    _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
+    monkeypatch.setattr(sys, "argv", ["review_agent.py"])
+    monkeypatch.setattr(
+        review_agent,
+        "call_opencode",
+        lambda *a, **k: '{"summary":"ok","verdict":"sound","findings":[]}',
+    )
+    posted = []
+    monkeypatch.setattr(
+        review_agent, "post_comment", lambda repo, number, token, body: posted.append(body)
+    )
+    assert review_agent.main() == 0
+    assert "OpenCode Zen Go" in posted[-1]
+
+
+def test_main_without_credentials_posts_skip(monkeypatch, tmp_path):
+    for key in (
+        "OPENCODE_ZEN_API_KEY",
+        "OPENCODE_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "CLAUDE_CODE_OAUTH_TOKEN",
+    ):
+        monkeypatch.delenv(key, raising=False)
+    _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
+    monkeypatch.setattr(sys, "argv", ["review_agent.py"])
+    posted = []
+    monkeypatch.setattr(
+        review_agent, "post_comment", lambda repo, number, token, body: posted.append(body)
+    )
+    assert review_agent.main() == 0
+    assert "skipped" in posted[-1].lower()
