@@ -1,0 +1,65 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install CPU PyTorch and dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e '.[dev]'
+
+      - name: Lint
+        run: ruff check src tests scripts
+
+      - name: Unit tests
+        run: python -m pytest -q
+
+      - name: DES conformance (pure reference)
+        run: python scripts/run_conformance.py --no-torch
+
+      - name: Smoke training run
+        run: |
+          python -m des_ml.train.train_distinguisher \
+            --config configs/smoke.yaml \
+            --max-steps 3 \
+            --device cpu \
+            --no-checkpoint \
+            --out /tmp/smoke-results
+
+      - name: Validate smoke manifest
+        run: |
+          shopt -s nullglob
+          dirs=(/tmp/smoke-results/*/)
+          test ${#dirs[@]} -eq 1
+          python scripts/ci/validate_manifest.py "${dirs[0]}"
+
+      - name: Upload smoke artefacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-results
+          path: /tmp/smoke-results
+          retention-days: 7

@@ -1,0 +1,27 @@
+# Stage 1 neural distinguisher: 16-round DES, KPA.
+# Rounds: Feistel rounds actually executed (final swap included).
+# Mode: uniform random plaintext pairs.
+run_name: des16-kpa
+rounds: 16
+mode: kpa
+delta: null
+
+model:
+  name: pair_cnn
+  channels: 64
+  blocks: 4
+  dropout: 0.1
+
+train:
+  batch_size: 512
+  steps: 6000
+  lr: 0.001
+  weight_decay: 0.01
+  log_every: 50
+  eval_every: 250
+  eval_batches: 32
+  seed: 0
+  device: auto
+
+data:
+  negative_fraction: 0.5

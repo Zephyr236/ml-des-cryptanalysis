@@ -1,0 +1,52 @@
+{
+  "artifacts": [
+    "best.pt",
+    "config.yaml",
+    "metrics.json",
+    "metrics.jsonl",
+    "train.log"
+  ],
+  "code_sha": "a49f29a41f83fa68f086f0c4da66ecdc240edacc",
+  "command": "python -m des_ml.train.train_distinguisher --config configs/smoke.yaml --out results/stage0 --device cuda --max-steps 3",
+  "config_path": "configs\\smoke.yaml",
+  "config_sha256": "10955c22721242d3487985fa5def256c2011fbd2c2c512416e9150a9ee2121d0",
+  "created_at": "2026-11-26T08:12:30Z",
+  "environment": {
+    "cuda": "12.4",
+    "cuda_available": true,
+    "gpu": "NVIDIA GeForce RTX 2060",
+    "machine": "AMD64",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.16",
+    "torch": "2.6.0+cu124"
+  },
+  "git_dirty": false,
+  "metrics": {
+    "best": {
+      "lr": 0.0002500000000000001,
+      "train_loss": 0.7294327020645142,
+      "val_acc": 0.53125,
+      "val_auc": 0.4765625,
+      "val_loss": 0.7118621468544006
+    },
+    "final": {
+      "best_step": 2.0,
+      "best_val_acc": 0.53125,
+      "lr": 0.0,
+      "train_loss": 0.727545440196991,
+      "val_acc": 0.5,
+      "val_auc": 0.4765625,
+      "val_loss": 0.7118621468544006
+    }
+  },
+  "run_id": "20261126T081230Z-a49f29a4-10955c22-s0",
+  "schema_version": 1,
+  "seed": 0,
+  "status": "completed",
+  "tags": {
+    "mode": "kpa",
+    "model": "pair_cnn",
+    "rounds": 2,
+    "split": "splitmix64-v1"
+  }
+}

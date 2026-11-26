@@ -1,0 +1,6 @@
+run_id=20261126T081230Z-a49f29a4-10955c22-s0 device=cuda seed=0 steps=3
+step=1 train_loss=0.683013 lr=7.50e-04
+step=2 train_loss=0.729433 lr=2.50e-04
+eval step=2 val_loss=0.699352 val_acc=0.5312 val_auc=0.4706
+step=3 train_loss=0.727545 lr=0.00e+00
+eval step=3 val_loss=0.711862 val_acc=0.5000 val_auc=0.4766

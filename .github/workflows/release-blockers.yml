@@ -1,0 +1,21 @@
+name: release-blockers
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  release-blockers:
+    name: release-blockers
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chohan-sarmad-ali/delivery-gates/release-blockers@v1
+        with:
+          checklist-path: "docs/SHIP-CHECKLIST.md"
+          require-checklist: "true"

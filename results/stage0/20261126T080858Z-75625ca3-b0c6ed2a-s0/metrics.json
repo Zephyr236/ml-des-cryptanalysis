@@ -1,0 +1,20 @@
+{
+  "best": {
+    "cuda_available": 0.0,
+    "fips_vector_pass": 1.0,
+    "parity_invariance_pass": 1.0,
+    "reference_blocks_per_second": 4579.119155471908,
+    "roundtrip_pass": 1.0,
+    "torch_available": 1.0,
+    "torch_equivalence_pass": 1.0
+  },
+  "final": {
+    "cuda_available": 0.0,
+    "fips_vector_pass": 1.0,
+    "parity_invariance_pass": 1.0,
+    "reference_blocks_per_second": 4579.119155471908,
+    "roundtrip_pass": 1.0,
+    "torch_available": 1.0,
+    "torch_equivalence_pass": 1.0
+  }
+}

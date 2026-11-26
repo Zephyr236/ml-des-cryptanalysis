@@ -1,0 +1,67 @@
+# Research log
+
+Reverse chronological. One entry per decision or result; link the issue
+and the manifest. Interpretations are provisional until replicated.
+
+## 2026-11-26 — Design review: SPADE selected
+
+**What.** Four independent designs (distinguisher + DDT ranking,
+candidate-key refinement, measurement/probing, structure-informed) were
+reviewed by three lenses (cryptanalysis, ML methodology, compute
+feasibility). All three ranked the structure-informed arm first; its
+grafts from the other arms are mandatory. The result is
+[`ROADMAP.md`](ROADMAP.md) and [ADR-0008](adr/0008-research-strategy-spade.md).
+
+**Why.** DES's last round decomposes into eight independent 64-way
+subkey hypotheses, and the key schedule is GF(2)-linear, so the problem
+is a 6-bit chunk density-ratio estimation with 2^8 master-key
+completions — not a 56-bit regression. Initialising the scorer with the
+exact DDT log-likelihood makes the neural contribution measurable as a
+residual rather than a from-scratch classifier.
+
+**Consequence.** The Stage 0 `PairCNN` is a baseline only. Stage 1 is
+blocked on the SPADE modules (issue #4). Pre-registered F1–F6 are frozen
+in ADR-0006 before any confirmatory run.
+
+## 2026-11-26 — Repository bootstrap (Stage 0)
+
+**What.** Created the project repository, governance (PR-only `main`,
+seven blocking gates, advisory review agent), a bit-exact DES reference
+and vectorised implementation, key-disjoint KPA/CPA data streams, a
+trainable distinguisher, and result manifests.
+
+**Why.** The previous 16-bit SPN result could not distinguish learning
+from memorisation: no key-disjoint split, no budget-matched baseline,
+no committed manifest. Stage 0 exists to make later claims auditable
+before any DES claim is made.
+
+**Evidence.** `results/stage0/<run_id>/manifest.json` (DES conformance).
+
+**Open questions.**
+
+- Does 4-round DES leave a learnable KPA signal at 6 GB of VRAM?
+- At which round count does the advantage interval first include zero?
+- Is the neural score aligned with a classical differential
+  characteristic, or with something else?
+
+## Prior stage — 16-bit SPN toy (archived)
+
+The full write-up and figures are in
+[`research/background/original-readme.md`](../research/background/original-readme.md).
+
+**Claimed result.** 2-round, 16-bit SPN, exact key recovery in ~27% of
+512 trials, versus ~0.2% for a uniform policy; 4 rounds did not train.
+
+**Known limitations (retrospective).**
+
+1. Target keys were sampled uniformly each step from a 2^16 space, so
+   the "test" keys were almost certainly seen during training.
+2. The uniform-policy baseline is not budget-matched random search.
+3. At a 16-bit key, brute force costs 65,536 encryptions, which is
+   orders of magnitude below the training cost; the result cannot be an
+   attack, only a learning demonstration.
+4. "SPN" and "Feistel" were used interchangeably for a single-branch
+   substitution-permutation construction.
+
+These limitations are the reason for the protocol in
+[ADR-0002](../docs/adr/0002-experiment-protocol.md).

@@ -1,0 +1,5 @@
+fips_vector_pass=True
+roundtrip_pass=True
+parity_invariance_pass=True
+torch_equivalence_pass=True
+reference_throughput=4579 blocks/s
