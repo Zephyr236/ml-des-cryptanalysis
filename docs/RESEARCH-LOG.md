@@ -40,7 +40,7 @@ trail (`2^-27.694`) is too weak for a feasible R=6 attack at 64 pairs.
 combos=12`; a wider search may find better trails.
 
 **Next.** Filter pairs by the r=3 last-round `a_j`, rerun the DDT rank on
-4 rounds, and measure the true chunk rank for S1 and S7. Then repeat for
+4 rounds, and measure the true chunk rank for S2 and S8. Then repeat for
 5 rounds with the r=4 trail.
 
 ## 2026-11-26 — DDT rank baseline is at chance without a characteristic

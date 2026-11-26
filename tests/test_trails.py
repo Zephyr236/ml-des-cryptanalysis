@@ -20,6 +20,7 @@ from des_ml.theory.trails import (
     reconstruct,
     sbox_input_differences,
     search,
+    shuffled_ddt,
     single_bit_starts,
 )
 
@@ -113,3 +114,15 @@ def test_single_bit_starts_are_unique():
     starts = single_bit_starts()
     assert len(starts) == 64
     assert len(set(starts)) == 64
+
+
+def test_shuffled_ddt_control_preserves_rows():
+    import numpy as np
+
+    ddt = ddt_tables()
+    control = shuffled_ddt(7)
+    assert control.shape == ddt.shape
+    assert np.array_equal(control[:, 0, :], ddt[:, 0, :])
+    assert np.array_equal(control.sum(axis=2), ddt.sum(axis=2))
+    assert not np.array_equal(control, ddt)
+    assert np.array_equal(control, shuffled_ddt(7))

@@ -17,6 +17,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+import numpy as np
+
 from ..des import IP_INV, E, P, permute
 from .ddt import ddt_tables
 
@@ -28,6 +30,7 @@ __all__ = [
     "single_bit_starts",
     "sbox_input_differences",
     "expand_node",
+    "shuffled_ddt",
 ]
 
 MASK32 = 0xFFFFFFFF
@@ -135,6 +138,22 @@ def _has_active_step(node: _Node) -> bool:
     return False
 
 
+def shuffled_ddt(seed: int = 0) -> np.ndarray:
+    """Structural null: permute each non-zero DDT row, preserving counts.
+
+    The row sums and the multiset of differential counts are unchanged;
+    only the difference-to-difference mapping is destroyed.  A search on
+    this table measures how much of a found trail depends on the specific
+    DES S-box structure.
+    """
+    ddt = ddt_tables().copy()
+    rng = np.random.default_rng(seed)
+    for j in range(8):
+        for difference in range(1, 64):
+            ddt[j, difference] = rng.permutation(ddt[j, difference])
+    return ddt
+
+
 def search(
     start_states: list[tuple[int, int]],
     rounds: int,
@@ -142,6 +161,7 @@ def search(
     beam: int = 2000,
     branch: int = 4,
     combos: int = 12,
+    ddt=None,
 ) -> tuple[dict[int, _Node], dict[int, _Node]]:
     """Return ``(best, best_active)`` per round.
 
@@ -151,7 +171,7 @@ def search(
     """
     if not start_states:
         raise ValueError("at least one start state is required")
-    ddt = ddt_tables()
+    ddt = ddt_tables() if ddt is None else ddt
     nodes = [_Node(0.0, left & MASK32, right & MASK32, None, None) for left, right in start_states]
     best: dict[int, _Node] = {}
     best_active: dict[int, _Node] = {}

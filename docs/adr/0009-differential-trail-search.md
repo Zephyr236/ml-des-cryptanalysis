@@ -59,8 +59,8 @@ differences, and there are eight S-boxes per round.
 10. **Beam sensitivity.** The run records the best active log2
     probability for several beam widths. A lower bound that moves with
     the beam width is reported as such; it is not a certificate.
-11. **Indexing.** S-box inputs/outputs are reported as 0-based array
-    indices (`S1=0, ..., S8=7`). Every trail artefact states this.
+11. **Indexing.** S-box arrays are 0-based (`index 0 = S1, ..., index 7 = S8`);
+    prose uses 1-based labels. Every trail artefact states the mapping.
 
 ## Consequences
 

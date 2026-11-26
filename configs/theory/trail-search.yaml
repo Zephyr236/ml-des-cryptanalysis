@@ -10,6 +10,12 @@ seed: 0
 
 sensitivity:
   beams: [500, 2000, 8000]
+  branches: [2, 8]
+  combos: [4, 32]
+
+controls:
+  shuffled_ddt: true
+  seed: 7
 device: auto
 
 validation:

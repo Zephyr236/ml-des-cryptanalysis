@@ -30,6 +30,7 @@ from des_ml.theory.trails import (  # noqa: E402
     Trail,
     reconstruct,
     search,
+    shuffled_ddt,
     single_bit_starts,
 )
 
@@ -144,7 +145,9 @@ def main() -> int:
             "combos": combos,
             "seed": seed,
         },
-        "sbox_indexing": "0-based array index: S1=0, S2=1, ..., S8=7",
+        "sbox_indexing": (
+            "0-based array index: index 0 is S1, index 1 is S2, ..., index 7 is S8"
+        ),
         "best": {str(r): trail_to_dict(reconstruct(node)) for r, node in best.items()},
         "best_active": {
             str(r): trail_to_dict(reconstruct(node)) for r, node in best_active.items()
@@ -183,23 +186,67 @@ def main() -> int:
             )
 
     sensitivity: dict[str, dict[str, float]] = {}
-    sensitivity_beams = [int(value) for value in (config.get("sensitivity") or {}).get("beams", [])]
-    if sensitivity_beams:
+    sensitivity_cfg = config.get("sensitivity") or {}
+    sensitivity_beams = [int(value) for value in sensitivity_cfg.get("beams", [])]
+    sensitivity_branches = [int(value) for value in sensitivity_cfg.get("branches", [])]
+    sensitivity_combos = [int(value) for value in sensitivity_cfg.get("combos", [])]
+    if sensitivity_beams or sensitivity_branches or sensitivity_combos:
         sensitivity_start = time.perf_counter()
         for sensitivity_beam in sensitivity_beams:
             _, active = search(
                 starts, max_rounds, beam=sensitivity_beam, branch=branch, combos=combos
             )
-            sensitivity[str(sensitivity_beam)] = {
-                str(r): reconstruct(node).log2_probability for r, node in active.items()
-            }
+            entry = {str(r): reconstruct(node).log2_probability for r, node in active.items()}
+            sensitivity[f"beam:{sensitivity_beam}"] = entry
             for r, node in active.items():
                 metrics[f"sensitivity_beam{sensitivity_beam}_log2p_r{r}"] = (
+                    reconstruct(node).log2_probability
+                )
+        for sensitivity_branch in sensitivity_branches:
+            _, active = search(
+                starts, max_rounds, beam=beam, branch=sensitivity_branch, combos=combos
+            )
+            entry = {str(r): reconstruct(node).log2_probability for r, node in active.items()}
+            sensitivity[f"branch:{sensitivity_branch}"] = entry
+            for r, node in active.items():
+                metrics[f"sensitivity_branch{sensitivity_branch}_log2p_r{r}"] = (
+                    reconstruct(node).log2_probability
+                )
+        for sensitivity_combo in sensitivity_combos:
+            _, active = search(
+                starts, max_rounds, beam=beam, branch=branch, combos=sensitivity_combo
+            )
+            entry = {str(r): reconstruct(node).log2_probability for r, node in active.items()}
+            sensitivity[f"combos:{sensitivity_combo}"] = entry
+            for r, node in active.items():
+                metrics[f"sensitivity_combos{sensitivity_combo}_log2p_r{r}"] = (
                     reconstruct(node).log2_probability
                 )
         metrics["sensitivity_seconds"] = time.perf_counter() - sensitivity_start
         (writer.path / "sensitivity.json").write_text(
             json.dumps(sensitivity, indent=2, sort_keys=True), encoding="utf-8"
+        )
+
+    control_cfg = config.get("controls") or {}
+    if control_cfg.get("shuffled_ddt"):
+        control_start = time.perf_counter()
+        control_ddt = shuffled_ddt(int(control_cfg.get("seed", 7)))
+        _, control_active = search(
+            starts,
+            max_rounds,
+            beam=beam,
+            branch=branch,
+            combos=combos,
+            ddt=control_ddt,
+        )
+        control = {
+            str(r): reconstruct(node).log2_probability for r, node in control_active.items()
+        }
+        for r, node in control_active.items():
+            metrics[f"control_shuffled_ddt_log2p_r{r}"] = reconstruct(node).log2_probability
+        metrics["control_seconds"] = time.perf_counter() - control_start
+        (writer.path / "control.json").write_text(
+            json.dumps(control, indent=2, sort_keys=True), encoding="utf-8"
         )
 
     validation = config.get("validation") or {}

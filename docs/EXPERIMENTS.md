@@ -74,13 +74,13 @@ validation.
 
 | Rounds | Active log2 p | Probability | Last-round S-box inputs | Validation |
 |---|---|---|---|---|
-| 1 | -2.000 | 0.25 | S5=8 | 0.25028, CI [0.2476, 0.2530], n=100k |
-| 2 | -2.000 | 0.25 | S5=8 | 0.24907, CI [0.2479, 0.2503], n=500k |
-| 3 | -7.093 | 0.00732 | S1=8, S7=8 | 0.007316, CI [0.007151, 0.007485], n=1M |
-| 4 | -17.642 | 4.89e-6 | S2=5, S3=16, S6=7, S7=48 | 5.10e-6, CI [4.20e-6, 6.19e-6], n=20M |
-| 5 | -27.694 | 4.60e-9 | S1=10, S2=32, S5=3, S6=52 | not sampled |
+| 1 | -2.000 | 0.25 | S6=8 | 0.25028, CI [0.2476, 0.2530], n=100k |
+| 2 | -2.000 | 0.25 | S6=8 | 0.24907, CI [0.2479, 0.2503], n=500k |
+| 3 | -7.093 | 0.00732 | S2=8, S8=8 | 0.007316, CI [0.007151, 0.007485], n=1M |
+| 4 | -17.642 | 4.89e-6 | S3=5, S4=16, S7=7, S8=48 | 5.10e-6, CI [4.20e-6, 6.19e-6], n=20M |
+| 5 | -27.694 | 4.60e-9 | S2=10, S3=32, S6=3, S7=52 | not sampled |
 
-S-box labels are 0-based array indices (`S1=0, ..., S8=7`). The r=1
+Prose uses 1-based S-box labels (S1..S8); `trails.json` stores 0-based array indices (index `k-1` for Sk). The r=1
 overall `best` is a trivial probability-1 trail with no active S-box; it
 is reported separately and is not used as a distinguisher.
 
