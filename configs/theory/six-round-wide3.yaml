@@ -1,0 +1,13 @@
+run_name: six-round-wide3-trail-search
+max_rounds: 5
+beam: 48000
+branch: 8
+combos: 48
+starts: multi_bit
+random_starts: 32768
+seed: 1
+device: auto
+validation:
+  rounds: []
+  samples: {}
+  batch: 8192
