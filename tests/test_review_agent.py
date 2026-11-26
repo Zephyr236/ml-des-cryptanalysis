@@ -307,4 +307,4 @@ def test_main_disables_claude_even_with_opt_in_on_untrusted_event(monkeypatch, t
         review_agent, "post_comment", lambda repo, number, token, body: posted.append(body)
     )
     assert review_agent.main() == 0
-    assert "trusted event" in posted[-1]
+    assert "workflow_dispatch" in posted[-1]
