@@ -174,12 +174,25 @@ result establishes that the learning pipeline is real at 2 rounds.
   `20261126T154314Z-691eb843-fefdb8d2-s0`; true-chunk ranks
   `[3,64,16,14.5,34,16,42,44]`, mean 29.19. Partial box-level signal,
   no key recovery.
-- Filtered attack: run `20261126T154935Z-80d903b0-583165ba-s0`;
-  323M chosen plaintext pairs, right-pair filter on the key-independent
-  last-round vector, exact DDT rank, top-k candidates, key-schedule
-  inversion and re-encryption verification. Result: **pending commit**
-  (this section is updated with the filtered count, true-chunk ranks and
-  the recovered key).
+- Full filtered attack: run
+  `20261126T161139Z-772dae9a-c55082ec-s0`; 323M chosen plaintext
+  pairs, exact right-pair filter on the trailing-round vector. Only
+  **4 pairs** passed, and the true-chunk DDT ranks were
+  `[51.5,63.5,9.5,56.5,30.5,40.5,4.5,21.5]` (mean 34.75): no key.
+  The earlier 323M run (same filter, different seed) also kept 4 pairs
+  and failed.
+- Partial filter: wildcard S-boxes 1 and 7, enumerate them fully, top-1
+  on the other six. 100M pairs, roughly 5k filtered pairs. The true
+  chunk ranks stayed near chance
+  `[51.5,46.5,14.5,56.5,28.5,27.5,10.5,22.5]`; the DDT score is diluted
+  by non-right pairs. The recovery process crashed after the scores were
+  written, so this run has no manifest; `scores.json` is retained as a
+  negative result.
+- Characteristic match: the DDT ranker scores wrong high-probability
+  output differences above true right pairs. The standard test instead
+  checks the trail's predicted `L5` difference after partially
+  decrypting the last round. Run with the same 323M-pair full filter is
+  in progress; its result replaces this paragraph when merged.
 - Neural 6-round chunk-scorer and PairCNN distinguisher training did not
   move above chance in early evaluations; this negative scaling result
   is recorded in ADR-0010.
