@@ -20,7 +20,7 @@ import torch
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from des_ml.des import PC1, PC2  # noqa: E402
+from des_ml.des import PC1, PC2, SHIFTS  # noqa: E402
 from des_ml.des_torch import des_encrypt_torch, rand64  # noqa: E402
 from des_ml.key_schedule import round_key_master_positions  # noqa: E402
 from des_ml.manifest import RunWriter, update_latest  # noqa: E402
@@ -59,7 +59,14 @@ def main() -> int:
 
     positions = round_key_master_positions(args.rounds)
     unknown_cd = [p for p in range(1, 57) if p not in set(PC2)]
-    unknown_master = [PC1[p - 1] for p in unknown_cd]
+    shift = sum(SHIFTS[: args.rounds]) % 28
+
+    def inverse_cd(position: int) -> int:
+        half = 0 if position <= 28 else 28
+        local = position - half
+        return half + ((local - 1 - shift) % 28) + 1
+
+    unknown_master = [PC1[inverse_cd(p) - 1] for p in unknown_cd]
     base = []
     for k2 in k2s:
         value = 0
