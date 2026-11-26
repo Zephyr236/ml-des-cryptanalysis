@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 $repo = 'D:\research\ml-des\repo'
 $py = 'D:\research\ml-des\.venv\Scripts\python.exe'
-$config = 'configs\six_round\chunk-scorer-des2-v2.yaml'
+$config = 'configs\six_round\chunk-scorer-des6-v2.yaml'
 Set-Location $repo
 $env:PYTHONPATH = "$repo\src"
 Write-Output "=== chunk scorer $config $(Get-Date -Format o) ==="
