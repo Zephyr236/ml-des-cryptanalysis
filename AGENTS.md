@@ -213,7 +213,7 @@ results/<stage>/<run_id>/
 - **R4 下一步**：给出具体、按优先级排序的后续实验；说明什么结果会改变结论。
 
 输出中的 `research_analysis` 和 `recommendations` 会渲染在 PR 评论里。对于触及
-`src/`、`configs/` 或 `results/` 的 PR，agent 会开一个 `[research] PR #N analysis` issue
+`src/`、`configs/` 或 `results/` 且模型判断存在研究内容的 PR，agent 会开一个 `[research] PR #N analysis` issue
 保存完整分析报告（标签 `research-review`、`analysis`）；high/medium 建议各自开
 `[research] ...` issue（标签 `recommendation`）。同类标题精确匹配去重，标签缺失
 不会丢失报告。以下代码清单同样适用：
