@@ -551,15 +551,20 @@ def test_main_skips_report_when_research_content_false(monkeypatch, tmp_path):
     review["research_analysis"]["research_content"] = False
     monkeypatch.setattr(review_agent, "call_opencode", lambda *a, **k: json.dumps(review))
     monkeypatch.setattr(review_agent, "post_comment", lambda *a, **k: None)
-    reports = []
+    reports, recommendations = [], []
     monkeypatch.setattr(
         review_agent,
         "file_research_report",
         lambda *a, **k: reports.append(a),
     )
-    monkeypatch.setattr(review_agent, "file_recommendation", lambda *a, **k: None)
+    monkeypatch.setattr(
+        review_agent,
+        "file_recommendation",
+        lambda *a, **k: recommendations.append(a),
+    )
     assert review_agent.main() == 0
     assert reports == []
+    assert recommendations == []
 
 
 def test_research_report_body_tolerates_malformed_fields():
@@ -581,3 +586,20 @@ def test_research_report_body_tolerates_malformed_fields():
     body = review_agent.research_report_body(review, 1, "title", "sha", "backend")
     assert "Hypothesis" in body
     assert "Recommendation" in body
+
+
+def test_deleted_manifest_is_not_changed_evidence():
+    diff = (
+        "diff --git a/results/stage1/r/manifest.json b/results/stage1/r/manifest.json\n"
+        "--- a/results/stage1/r/manifest.json\n"
+        "+++ /dev/null\n"
+    )
+    assert review_agent._changed_manifests(diff) == set()
+
+
+def test_safe_title_sanitizes_and_caps():
+    title = review_agent._safe_title("a\nb" + "x" * 200, "[review]", "fallback")
+    assert title.startswith("[review] a b")
+    assert "\n" not in title
+    assert len(title) <= len("[review] ") + 120
+    assert review_agent._safe_title("", "[review]", "fallback") == "[review] fallback"

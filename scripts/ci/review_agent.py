@@ -183,7 +183,8 @@ def find_existing_issue(repo: str, token: str, title: str) -> dict | None:
     Paginates all open issues and does not filter by label: the 422
     fallback may create an unlabeled issue, which must still be found.
     """
-    for page in range(1, 6):
+    page = 1
+    while True:
         url = (
             f"https://api.github.com/repos/{repo}/issues"
             f"?state=open&per_page=100&page={page}"
@@ -209,7 +210,7 @@ def find_existing_issue(repo: str, token: str, title: str) -> dict | None:
             return item
         if len(items) < 100:
             return None
-    return None
+        page += 1
 
 
 def create_or_comment_issue(
@@ -252,7 +253,7 @@ def create_or_comment_issue(
 
 
 def file_issue(repo: str, token: str, finding: dict, pr_number: int) -> None:
-    title = f"[review] {_text(finding.get('title', ''))}"
+    title = _safe_title(finding.get("title", ""), "[review]", "finding")
     body = (
         f"Filed by the automated review agent on PR #{pr_number}.\n\n"
         f"**Severity:** {finding['severity']}  \n"
@@ -265,6 +266,13 @@ def file_issue(repo: str, token: str, finding: dict, pr_number: int) -> None:
         "research decision, not a CI state."
     )
     create_or_comment_issue(repo, token, title, body, [LABEL, finding["area"]])
+
+
+def _safe_title(text, prefix: str, fallback: str) -> str:
+    clean = re.sub(r"\s+", " ", _text(text)).strip()
+    if not clean:
+        clean = fallback
+    return f"{prefix} {clean[:120]}"
 
 
 def _text(value) -> str:
@@ -374,7 +382,7 @@ def file_research_report(
 def file_recommendation(
     repo: str, token: str, recommendation: dict, pr_number: int, pr_title: str
 ) -> None:
-    title = f"[research] {_text(recommendation.get('title', ''))}"
+    title = _safe_title(recommendation.get("title", ""), "[research]", "recommendation")
     body = (
         f"Filed by the review agent from PR #{pr_number} ({pr_title}).\n\n"
         f"**Priority:** {recommendation.get('priority', '?')}  \n"
@@ -615,19 +623,38 @@ def select_backend(opencode_key: str, anthropic_key: str, oauth_token: str) -> s
     return "none"
 
 
+def _diff_blocks(diff: str) -> list[tuple[str, str, bool]]:
+    """Return ``(old_path, new_path, deleted)`` per ``diff --git`` block."""
+    entries: list[tuple[str, str, bool]] = []
+    for block in re.split(r"(?m)^diff --git ", diff)[1:]:
+        lines = block.splitlines()
+        if not lines:
+            continue
+        match = re.match(r"a/(\S+) b/(\S+)$", lines[0].strip())
+        if not match:
+            continue
+        old, new = match.groups()
+        deleted = any(line == "+++ /dev/null" for line in lines)
+        entries.append((old, new, deleted))
+    return entries
+
+
 def _diff_paths(diff: str) -> set[str]:
     paths: set[str] = set()
-    for match in re.finditer(r"^diff --git a/(\S+) b/(\S+)$", diff, flags=re.M):
-        paths.update(match.groups())
+    for old, new, _ in _diff_blocks(diff):
+        paths.update((old, new))
+    paths.discard("/dev/null")
     return paths
 
 
 def _changed_manifests(diff: str) -> set[str]:
-    return {
-        path
-        for path in _diff_paths(diff)
-        if path.startswith("results/") and path.endswith("/manifest.json")
-    }
+    manifests: set[str] = set()
+    for _, new, deleted in _diff_blocks(diff):
+        if deleted:
+            continue
+        if new.startswith("results/") and new.endswith("/manifest.json"):
+            manifests.add(new)
+    return manifests
 
 
 def build_prompt(diff: str, pr: dict | None = None) -> str:
@@ -794,7 +821,10 @@ def main() -> int:
         except Exception as exc:  # noqa: BLE001 - issue filing is best effort
             print(f"could not file research report: {exc}", file=sys.stderr)
 
+    research_content = analysis.get("research_content", True) is not False
     for recommendation in _dict_items(review.get("recommendations")):
+        if not research_content:
+            break
         if recommendation.get("priority") in {"high", "medium"}:
             try:
                 file_recommendation(
