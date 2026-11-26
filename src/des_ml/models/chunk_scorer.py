@@ -62,15 +62,20 @@ class ChunkScorer(nn.Module):
         self.key_embedding = nn.Embedding(64, 32)
         self.output_embedding = nn.Embedding(16, 16)
         self.input_embedding = nn.Embedding(64, 16)
-        self.sbox_embedding = nn.Embedding(8, 8)
-        self.head = nn.Sequential(
-            nn.Linear(hidden + 32 + 16 + 16 + 8 + 1, hidden // 2),
-            nn.GELU(),
-            nn.Linear(hidden // 2, 1),
+        self.heads = nn.ModuleList(
+            [
+                nn.Sequential(
+                    nn.Linear(hidden + 32 + 16 + 16 + 1, hidden // 2),
+                    nn.GELU(),
+                    nn.Linear(hidden // 2, 1),
+                )
+                for _ in range(8)
+            ]
         )
         # Start as the exact log-DDT counter.
-        nn.init.zeros_(self.head[-1].weight)
-        nn.init.zeros_(self.head[-1].bias)
+        for head in self.heads:
+            nn.init.zeros_(head[-1].weight)
+            nn.init.zeros_(head[-1].bias)
 
     def forward(
         self,
@@ -113,7 +118,6 @@ class ChunkScorer(nn.Module):
             key = self.key_embedding(candidates)
             out = self.output_embedding(outputs)
             inp = self.input_embedding(u1.unsqueeze(-1).expand_as(six1))
-            sbox = self.sbox_embedding(torch.full_like(six1, j, dtype=torch.long))
             trunk_expanded = trunk.unsqueeze(2).expand(-1, -1, 64, -1)
             features = torch.cat(
                 [
@@ -121,12 +125,11 @@ class ChunkScorer(nn.Module):
                     key.unsqueeze(0).unsqueeze(0).expand(trunk.shape[0], trunk.shape[1], -1, -1),
                     out,
                     inp,
-                    sbox,
                     ddt.unsqueeze(-1),
                 ],
                 dim=-1,
             )
-            logits.append(self.head(features).squeeze(-1) + ddt)
+            logits.append(self.heads[j](features).squeeze(-1) + ddt)
         stacked = torch.stack(logits, dim=2)  # (B, M, 8, 64)
         if return_per_pair:
             return stacked
