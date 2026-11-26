@@ -51,7 +51,10 @@ def main() -> int:
     parser.add_argument(
         "--filter-vector",
         default=None,
-        help="comma-separated eight last-round S-box input differences; keep matching pairs",
+        help=(
+            "comma-separated eight last-round S-box input differences; "
+            "use -1 to wildcard a box"
+        ),
     )
     parser.add_argument("--top-k", type=int, default=1, help="candidates per S-box for key recovery")
     parser.add_argument("--max-combos", type=float, default=2_000_000)
@@ -96,6 +99,7 @@ def main() -> int:
         if len(values) != 8:
             raise ValueError("--filter-vector must have eight values")
         filter_vector = torch.tensor(values, dtype=torch.long, device=device)
+        filter_active = filter_vector >= 0
     scores = torch.zeros((8, 64), dtype=torch.float64, device=device)
     filtered_pairs = 0
     start = time.perf_counter()
@@ -111,7 +115,7 @@ def main() -> int:
             if filter_vector is not None:
                 _, left1, _, left2 = last_round_context(ciphertext1, ciphertext2)
                 inputs = sbox_inputs(left1) ^ sbox_inputs(left2)
-                mask = (inputs == filter_vector).all(dim=-1)[0]
+                mask = ((inputs == filter_vector) | (~filter_active)).all(dim=-1)[0]
                 kept = int(mask.sum().item())
                 filtered_pairs += kept
                 if kept:
