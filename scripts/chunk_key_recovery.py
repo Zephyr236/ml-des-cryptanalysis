@@ -50,6 +50,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-combos", type=float, default=2_000_000)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--no-latest", action="store_true")
     return parser.parse_args()
 
 
@@ -224,7 +225,8 @@ def main() -> int:
     )
     writer.record(0, metrics)
     manifest = writer.finish(status="completed", final=metrics)
-    update_latest(REPO_ROOT / "results", writer.path, manifest)
+    if not args.no_latest:
+        update_latest(REPO_ROOT / "results", writer.path, manifest)
     print(json.dumps({"run_dir": str(writer.path), "metrics": metrics}, indent=2))
     return 0
 
