@@ -78,8 +78,9 @@ class ChunkScorer(nn.Module):
         plaintext2: torch.Tensor,
         ciphertext1: torch.Tensor,
         ciphertext2: torch.Tensor,
+        return_per_pair: bool = False,
     ) -> torch.Tensor:
-        """Return ``(B, 8, 64)`` summed logits over the pair axis."""
+        """Return summed ``(B, 8, 64)`` or per-pair ``(B, M, 8, 64)`` logits."""
         state1 = permute_torch(ciphertext1, IP, 64)
         state2 = permute_torch(ciphertext2, IP, 64)
         right1 = (state1 >> 32) & MASK32
@@ -130,7 +131,10 @@ class ChunkScorer(nn.Module):
                 dim=-1,
             )
             logits.append(self.head(features).squeeze(-1) + ddt)
-        return torch.stack(logits, dim=1).sum(dim=2)
+        stacked = torch.stack(logits, dim=2)  # (B, M, 8, 64)
+        if return_per_pair:
+            return stacked
+        return stacked.sum(dim=1)
 
 
 def candidate_log_ddt(
