@@ -25,7 +25,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from des_ml.data import SPLIT_TEST, SPLIT_VAL  # noqa: E402
-from des_ml.des_torch import des_encrypt_torch, rand64  # noqa: E402
+from des_ml.des_torch import des_encrypt_torch, key_schedule_torch, rand64  # noqa: E402
 from des_ml.eval.ddt_rank import log_ddt_tensor, sample_keys, sbox_lut  # noqa: E402
 from des_ml.key_schedule import recover_master_keys  # noqa: E402
 from des_ml.manifest import RunWriter, update_latest  # noqa: E402
@@ -51,6 +51,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--no-latest", action="store_true")
+    parser.add_argument("--analyze-only", action="store_true")
     return parser.parse_args()
 
 
@@ -161,7 +162,25 @@ def main() -> int:
             key_tensor = torch.tensor([key], dtype=torch.long, device=device)
             p1, p2, c1, c2 = make_pairs(config, key_tensor, pairs, device, generator)
             logits = model(p1, p2, c1, c2)[0]  # (8, 64)
+            round_key = key_schedule_torch(key_tensor, rounds)[-1]
+            truth = torch.stack(
+                [(round_key >> (42 - 6 * j)) & 0x3F for j in range(8)], dim=1
+            )[0]
+            true_scores = logits.gather(1, truth.unsqueeze(1)).squeeze(1)
+            ranks = 1.0 + (logits > true_scores.unsqueeze(1)).sum(dim=1).float() + (
+                (logits == true_scores.unsqueeze(1)).sum(dim=1).float() - 1.0
+            ) / 2.0
             top = torch.topk(logits, args.top, dim=-1).indices  # (8, top)
+            if args.analyze_only:
+                details.append(
+                    {
+                        "key": f"0x{key & ((1 << 64) - 1):016X}",
+                        "success": False,
+                        "candidates_tried": 0,
+                        "ranks": [float(value) for value in ranks.tolist()],
+                    }
+                )
+                continue
             candidates_per_sbox = [
                 top[j].tolist() if j in trusted else list(range(64)) for j in range(8)
             ]
@@ -206,6 +225,7 @@ def main() -> int:
                     "key": f"0x{key & ((1 << 64) - 1):016X}",
                     "success": success,
                     "candidates_tried": tried,
+                    "ranks": [float(value) for value in ranks.tolist()],
                 }
             )
             writer.log(f"key={index} success={success} tried={tried}")
