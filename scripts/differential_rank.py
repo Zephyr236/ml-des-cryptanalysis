@@ -57,6 +57,11 @@ def main() -> int:
         ),
     )
     parser.add_argument("--top-k", type=int, default=1, help="candidates per S-box for key recovery")
+    parser.add_argument(
+        "--full-boxes",
+        default="",
+        help="comma-separated S-box indices to enumerate fully during recovery",
+    )
     parser.add_argument("--max-combos", type=float, default=2_000_000)
     parser.add_argument("--no-latest", action="store_true")
     args = parser.parse_args()
@@ -85,6 +90,7 @@ def main() -> int:
             "batch": args.batch,
             "filter_vector": args.filter_vector,
             "top_k": args.top_k,
+            "full_boxes": args.full_boxes,
         },
         config_path="scripts/differential_rank.py",
         seed=args.seed,
@@ -155,7 +161,12 @@ def main() -> int:
     )
     recovered = False
     topk = torch.topk(scores, args.top_k, dim=1).indices
-    candidate_lists = [topk[j].tolist() for j in range(8)]
+    full_boxes = {
+        int(value.strip()) for value in args.full_boxes.split(",") if value.strip()
+    }
+    candidate_lists = [
+        list(range(64)) if j in full_boxes else topk[j].tolist() for j in range(8)
+    ]
     combos = 1
     for values in candidate_lists:
         combos *= len(values)
