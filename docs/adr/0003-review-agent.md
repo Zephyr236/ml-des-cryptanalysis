@@ -52,9 +52,10 @@ as issues.
    the `agent-review` label and an area label (`crypto`, `leakage`,
    `statistics`, `training`, `compute`, `reproducibility`, `claims`,
    `code`). Duplicate titles reuse the open issue and append a comment.
-7. **Missing credentials skip, not fail.** If neither
-   `ANTHROPIC_API_KEY` nor `CLAUDE_CODE_OAUTH_TOKEN` is configured, the
-   job posts a notice and exits successfully.
+7. **Missing credentials skip, not fail.** If none of
+   `OPENCODE_ZEN_API_KEY`, `ANTHROPIC_API_KEY` or
+   `CLAUDE_CODE_OAUTH_TOKEN` is configured, the job posts a notice and
+   exits successfully.
 8. **Models are configurable.** The Claude transport reads
    `REVIEW_MODEL` (default `claude-sonnet-5-5`); the OpenCode transport
    reads `OPENCODE_MODEL` (default `deepseek-v4.1-flash`) and
