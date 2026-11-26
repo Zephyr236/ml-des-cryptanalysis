@@ -6,7 +6,7 @@ $py = 'D:\research\ml-des\.venv\Scripts\python.exe'
 Set-Location $repo
 $env:PYTHONPATH = "$repo\src"
 Write-Output "=== six-round trail search $(Get-Date -Format o) ==="
-& $py scripts\trail_search.py --config configs\theory\six-round-trail.yaml --out results/stage1
+& $py scripts\trail_search.py --config configs\theory\six-round-wide2.yaml --out results/stage1
 $code = $LASTEXITCODE
 Write-Output "=== exit $code $(Get-Date -Format o) ==="
 exit $code
