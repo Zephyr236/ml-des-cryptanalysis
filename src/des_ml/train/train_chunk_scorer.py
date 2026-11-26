@@ -187,14 +187,8 @@ def main() -> int:
                 n_keys=int(train_cfg.get("keys_per_batch", 16)),
                 pairs=int(train_cfg.get("pairs_per_key", 32)),
             )
-            per_pair = model(p1, p2, c1, c2, return_per_pair=True)
-            logits = per_pair.sum(dim=1)
-            loss_listwise = F.cross_entropy(logits.reshape(-1, 64), truth.reshape(-1))
-            expanded_truth = truth.unsqueeze(1).expand(-1, per_pair.shape[1], -1)
-            loss_pair = F.cross_entropy(
-                per_pair.reshape(-1, 64), expanded_truth.reshape(-1)
-            )
-            loss = loss_listwise + 0.5 * loss_pair
+            logits = model(p1, p2, c1, c2)
+            loss = F.cross_entropy(logits.reshape(-1, 64), truth.reshape(-1))
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -202,15 +196,8 @@ def main() -> int:
             scheduler.step()
 
             if step % log_every == 0 or step == 1:
-                writer.log(
-                    f"step={step} loss={loss.item():.6f} listwise={loss_listwise.item():.6f} "
-                    f"pair={loss_pair.item():.6f} lr={scheduler.get_last_lr()[0]:.2e}"
-                )
-                print(
-                    f"step={step} loss={loss.item():.6f} listwise={loss_listwise.item():.6f} "
-                    f"pair={loss_pair.item():.6f}",
-                    flush=True,
-                )
+                writer.log(f"step={step} loss={loss.item():.6f} lr={scheduler.get_last_lr()[0]:.2e}")
+                print(f"step={step} loss={loss.item():.6f}", flush=True)
             if step % eval_every == 0 or step == steps:
                 metrics = evaluate(model, config, device=device, generator=eval_generator)
                 metrics["train_loss"] = float(loss.item())

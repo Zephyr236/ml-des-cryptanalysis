@@ -53,7 +53,7 @@ class ChunkScorer(nn.Module):
         self.register_buffer("sbox_lut", sbox_lut.long())
         self.register_buffer("log_ddt", log_ddt.float())
         self.trunk = nn.Sequential(
-            nn.Linear(6 * 64, hidden),
+            nn.Linear(4 * 64, hidden),
             nn.GELU(),
             nn.Dropout(dropout),
             nn.Linear(hidden, hidden),
@@ -64,7 +64,7 @@ class ChunkScorer(nn.Module):
         self.input_embedding = nn.Embedding(64, 16)
         self.sbox_embedding = nn.Embedding(8, 8)
         self.head = nn.Sequential(
-            nn.Linear(hidden + 32 + 16 + 16 + 16 + 8 + 1, hidden // 2),
+            nn.Linear(hidden + 32 + 16 + 16 + 8 + 1, hidden // 2),
             nn.GELU(),
             nn.Linear(hidden // 2, 1),
         )
@@ -93,8 +93,6 @@ class ChunkScorer(nn.Module):
                 blocks_to_planes(plaintext2),
                 blocks_to_planes(right1),
                 blocks_to_planes(right2),
-                blocks_to_planes(left1),
-                blocks_to_planes(left2),
             ],
             dim=-1,
         )
@@ -115,7 +113,6 @@ class ChunkScorer(nn.Module):
             key = self.key_embedding(candidates)
             out = self.output_embedding(outputs)
             inp = self.input_embedding(u1.unsqueeze(-1).expand_as(six1))
-            inp2 = self.input_embedding(u2.unsqueeze(-1).expand_as(six2))
             sbox = self.sbox_embedding(torch.full_like(six1, j, dtype=torch.long))
             trunk_expanded = trunk.unsqueeze(2).expand(-1, -1, 64, -1)
             features = torch.cat(
@@ -124,7 +121,6 @@ class ChunkScorer(nn.Module):
                     key.unsqueeze(0).unsqueeze(0).expand(trunk.shape[0], trunk.shape[1], -1, -1),
                     out,
                     inp,
-                    inp2,
                     sbox,
                     ddt.unsqueeze(-1),
                 ],
