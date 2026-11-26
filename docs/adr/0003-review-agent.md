@@ -87,10 +87,13 @@ as issues.
   sentences, but the scientific judgement remains human.
 - The repository must hold at least one model credential as an Actions
   secret (`OPENCODE_ZEN_API_KEY`, `ANTHROPIC_API_KEY`, or
-  `CLAUDE_CODE_OAUTH_TOKEN`). The key is never exposed to the agent's
-  tools; only the transport process reads it. With only Claude
-  credentials and no tool opt-in, CI posts a skip notice rather than
-  running a tool-enabled agent on PR content.
+  `CLAUDE_CODE_OAUTH_TOKEN`). The key is present in the transport
+  process's environment; the tool-less OpenCode path only sees the diff
+  and manifests we send. The tool-enabled path is disabled by default
+  because Read/Grep/Glob could read files the process can access,
+  including environment files; a trusted dispatch that opts in accepts
+  that risk. With only Claude credentials and no opt-in, CI posts a skip
+  notice rather than running a tool-enabled agent on PR content.
 - The OpenCode transport cannot read files outside the prompt, so a
   review of a very large diff sees a truncated view. The deterministic
   gates remain the authority for anything the prompt cannot show.

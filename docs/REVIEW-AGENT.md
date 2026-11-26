@@ -40,8 +40,9 @@ and exits 0 without posting. A local test must set
 not trusted.
 
 The tool-less transport cannot read files, but injected diff text can
-still shape the wording of the public comment. Treat every review as
-advisory and check its claims against the deterministic gates.
+still shape the wording of the public comment and influence which
+advisories become issues. Treat every review and every filed issue as
+advisory, and check its claims against the deterministic gates.
 
 Because `pull_request_target` checks out the base branch, a PR that
 changes this guard is reviewed by the **old** base version. The new guard

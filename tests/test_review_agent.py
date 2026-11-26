@@ -308,3 +308,19 @@ def test_main_disables_claude_even_with_opt_in_on_untrusted_event(monkeypatch, t
     )
     assert review_agent.main() == 0
     assert "workflow_dispatch" in posted[-1]
+
+
+def test_main_disables_claude_with_opt_in_and_empty_event(monkeypatch, tmp_path):
+    monkeypatch.delenv("OPENCODE_ZEN_API_KEY", raising=False)
+    monkeypatch.delenv("OPENCODE_API_KEY", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic")
+    monkeypatch.setenv("ALLOW_TOOL_TRANSPORT", "1")
+    monkeypatch.delenv("GITHUB_EVENT_NAME", raising=False)
+    _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
+    monkeypatch.setattr(sys, "argv", ["review_agent.py"])
+    posted = []
+    monkeypatch.setattr(
+        review_agent, "post_comment", lambda repo, number, token, body: posted.append(body)
+    )
+    assert review_agent.main() == 0
+    assert "workflow_dispatch" in posted[-1]
