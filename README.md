@@ -21,8 +21,11 @@ reached ~27% recovery at 2 rounds and failed at 4) is archived at
 **Stage 0 complete; 6-round CPA key recovery achieved.** A 5-round
 full-active differential trail, a key-independent right-pair filter, and
 a characteristic-match last-round test recover a 56-bit DES key at six
-rounds from 323M chosen pairs (4 right pairs, top-2, 48,896 schedule
-candidates, verified by re-encryption). The 2-round SPADE chunk scorer
+rounds from 323M chosen pairs (4 right pairs, fixed top-2 protocol,
+48,896 schedule candidates, verified by re-encryption). This is a
+single-target-key demonstration with large data complexity, not a
+practical break of DES, and the 6-round key ranking is classical rather
+than neural. The 2-round SPADE chunk scorer
 reaches 0.39 chunk accuracy versus the DDT's 0.0; the 6-round neural
 scorer remains a negative scaling result. The repository contains:
 

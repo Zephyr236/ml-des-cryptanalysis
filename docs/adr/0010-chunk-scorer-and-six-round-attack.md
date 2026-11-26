@@ -52,7 +52,9 @@ working 6-round known/chosen-plaintext attack with an AI component; the
 - The six-round attack is a single-key demonstration with large data
   complexity, not a practical break of DES.
 - The right-pair filter is key-independent and can be applied before
-  any key guess; it removes most noise and makes the DDT rank usable.
+  any key guess.  It does **not** by itself make the DDT rank usable:
+  the DDT rank stayed at chance on the four filtered pairs, and the
+  characteristic-match test is required.
 - **Result:** the match test over 323M pairs kept four pairs and put
   all true chunks at rank 1.5; top-2 recovered the effective key
   `0x123456789ABCDEF0`, parity-equivalent to the target

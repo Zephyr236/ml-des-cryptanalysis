@@ -181,7 +181,8 @@ result establishes that the learning pipeline is real at 2 rounds.
   `[51.5,63.5,9.5,56.5,30.5,40.5,4.5,21.5]` (mean 34.75): no key.
   The earlier 323M run (same filter, different seed) also kept 4 pairs
   and failed.
-- Partial filter: wildcard S-boxes 1 and 7, enumerate them fully, top-1
+- Partial filter (**diagnostic only; no manifest, not quantitative
+  evidence**): wildcard S-boxes 1 and 7, enumerate them fully, top-1
   on the other six. 100M pairs, roughly 5k filtered pairs. The true
   chunk ranks stayed near chance
   `[51.5,46.5,14.5,56.5,28.5,27.5,10.5,22.5]`; the DDT score is diluted
@@ -200,7 +201,12 @@ result establishes that the learning pipeline is real at 2 rounds.
   `20261126T171750Z-0b60a9d9-52394cf1-s0`, `recovered=1`). This is
   parity-equivalent to the target `0x133457799BBCDFF1`: both give the
   FIPS vector `0x85E813540F0AB405`, and the recovered key re-encrypts
-  the target's verification blocks.
+  the target's verification blocks.  The recovery used four fresh
+  random verification blocks; the key is unique up to the eight DES
+  parity bits.  Compute: 323M chosen pairs, 1116 s data generation,
+  48,896 candidate master keys (256 combinations × 256 completions),
+  one RTX 2060.  The top-2 protocol is fixed for the statistic, not
+  chosen per key.
 - Neural 6-round chunk-scorer and PairCNN distinguisher training did not
   move above chance in early evaluations; this negative scaling result
   is recorded in ADR-0010.
