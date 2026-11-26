@@ -170,6 +170,11 @@ def main() -> int:
             ranks = 1.0 + (logits > true_scores.unsqueeze(1)).sum(dim=1).float() + (
                 (logits == true_scores.unsqueeze(1)).sum(dim=1).float() - 1.0
             ) / 2.0
+            ddt_logits = candidate_log_ddt(c1, c2, model.sbox_lut, model.log_ddt)[0]
+            ddt_true = ddt_logits.gather(1, truth.unsqueeze(1)).squeeze(1)
+            ddt_ranks = 1.0 + (ddt_logits > ddt_true.unsqueeze(1)).sum(dim=1).float() + (
+                (ddt_logits == ddt_true.unsqueeze(1)).sum(dim=1).float() - 1.0
+            ) / 2.0
             top = torch.topk(logits, args.top, dim=-1).indices  # (8, top)
             if args.analyze_only:
                 details.append(
@@ -178,6 +183,7 @@ def main() -> int:
                         "success": False,
                         "candidates_tried": 0,
                         "ranks": [float(value) for value in ranks.tolist()],
+                        "ddt_ranks": [float(value) for value in ddt_ranks.tolist()],
                     }
                 )
                 continue
@@ -226,6 +232,7 @@ def main() -> int:
                     "success": success,
                     "candidates_tried": tried,
                     "ranks": [float(value) for value in ranks.tolist()],
+                    "ddt_ranks": [float(value) for value in ddt_ranks.tolist()],
                 }
             )
             writer.log(f"key={index} success={success} tried={tried}")
