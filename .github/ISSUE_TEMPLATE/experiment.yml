@@ -1,0 +1,55 @@
+name: Experiment
+description: A pre-registered experiment with a falsifiable hypothesis.
+title: "[exp] "
+labels: ["experiment"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Open this before running anything. The experiment is judged against
+        the criteria you write here, not against what the numbers turn out
+        to be.
+  - type: textarea
+    id: hypothesis
+    attributes:
+      label: Hypothesis
+      description: What do you expect, and why? State it so it can be wrong.
+      placeholder: "A 6-round DES neural distinguisher trained on 10^6 KPA pairs will reach AUC > 0.55 on held-out keys."
+    validations:
+      required: true
+  - type: textarea
+    id: protocol
+    attributes:
+      label: Protocol
+      description: Rounds, threat model (KPA/CPA), data complexity, model, seeds, splits.
+    validations:
+      required: true
+  - type: textarea
+    id: success
+    attributes:
+      label: Success and failure criteria
+      description: Pre-register both. A negative result is acceptable and must be reported.
+    validations:
+      required: true
+  - type: input
+    id: budget
+    attributes:
+      label: Compute budget
+      description: Estimated GPU hours and DES-encryption equivalents on the RTX 2060.
+  - type: textarea
+    id: baselines
+    attributes:
+      label: Baselines
+      description: Budget-matched random search, brute force, classical differential/linear, controls.
+    validations:
+      required: true
+  - type: input
+    id: adr
+    attributes:
+      label: Related ADR
+      description: Path to the decision record that motivates this experiment.
+  - type: textarea
+    id: analysis
+    attributes:
+      label: Analysis plan
+      description: Which metrics, which plots, and which diagnostic separates representation failure from decoding failure?

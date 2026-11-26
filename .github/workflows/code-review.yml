@@ -1,0 +1,55 @@
+name: code-review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: code-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: review-agent
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Advisory by design (ADR-0003): this job must never block a merge.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Claude Code CLI and Agent SDK
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          pip install claude-agent-sdk
+
+      - name: Build pull-request diff
+        run: |
+          git fetch origin "+refs/heads/*:refs/remotes/origin/*" --prune
+          git diff "origin/${{ github.event.pull_request.base.ref }}...${{ github.event.pull_request.head.sha }}" > /tmp/pr.diff
+          wc -c /tmp/pr.diff
+
+      - name: Review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_DIFF_PATH: /tmp/pr.diff
+          REVIEW_MODEL: ${{ vars.REVIEW_MODEL || 'claude-sonnet-5-5' }}
+        run: python scripts/ci/review_agent.py

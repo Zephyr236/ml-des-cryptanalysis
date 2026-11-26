@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Local guard: a commit that changes code or configs must also touch results/.
+# CI enforces the same rule at PR level (results-gate), where it can check
+# code_sha against the PR history.
+set -euo pipefail
+
+if [ "${SKIP_RESULTS:-0}" = "1" ]; then
+    exit 0
+fi
+
+staged=$(git diff --cached --name-only)
+if printf '%s\n' "$staged" | grep -Eq '^(src|configs|scripts)/'; then
+    if ! printf '%s\n' "$staged" | grep -q '^results/'; then
+        cat >&2 <<'EOF'
+pre-commit: this commit changes src/, configs/ or scripts/ but adds no results/.
+
+Run the experiment on the GPU host and commit results/<stage>/<run_id>/
+together with the code, or set SKIP_RESULTS=1 for a work-in-progress commit
+that will not be proposed for merge.
+EOF
+        exit 1
+    fi
+fi

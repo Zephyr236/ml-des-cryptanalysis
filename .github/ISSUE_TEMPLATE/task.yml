@@ -1,0 +1,28 @@
+name: Task
+description: Infrastructure, tooling, documentation or refactor work.
+title: "[task] "
+labels: ["task"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What needs doing
+      description: Be specific enough that completion is checkable.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Bullet list. Each item should be verifiable.
+    validations:
+      required: true
+  - type: input
+    id: area
+    attributes:
+      label: Area
+      description: infrastructure / ci / docs / code / remote
+  - type: textarea
+    id: risk
+    attributes:
+      label: Risk and rollback

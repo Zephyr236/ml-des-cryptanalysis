@@ -1,0 +1,21 @@
+name: adr-numbers
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  adr-numbers:
+    name: adr-numbers
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: chohan-sarmad-ali/delivery-gates/adr-numbers@v1
+        with:
+          adr-dirs: "docs/adr"
+          require-dir: "true"

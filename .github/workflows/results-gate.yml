@@ -1,0 +1,46 @@
+name: results-gate
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: results-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  results-gate:
+    name: results-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install validator dependency
+        run: pip install pyyaml
+
+      - name: Extract PR body
+        run: |
+          python - <<'PY'
+          import json, os
+          event = json.load(open(os.environ["GITHUB_EVENT_PATH"]))
+          body = (event.get("pull_request") or {}).get("body") or ""
+          open("/tmp/pr-body.md", "w", encoding="utf-8").write(body)
+          PY
+
+      - name: Require a reproducible result manifest
+        run: |
+          python scripts/ci/validate_results.py \
+            --base "origin/${{ github.base_ref }}" \
+            --head "${{ github.event.pull_request.head.sha }}" \
+            --body-file /tmp/pr-body.md

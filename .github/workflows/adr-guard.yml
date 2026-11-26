@@ -1,0 +1,26 @@
+name: adr-guard
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  adr-guard:
+    name: adr-guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: chohan-sarmad-ali/delivery-gates@v1
+        with:
+          watch-paths: "src/**,configs/**,scripts/**"
+          adr-paths: "docs/adr/**"
+          # Tests, docs, markdown and lockfiles are ignored by the action's
+          # defaults; keep this list generous so the gate stays meaningful.
+          waiver-marker: "ADR-Exempt:"

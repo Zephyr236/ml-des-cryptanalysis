@@ -1,0 +1,29 @@
+name: Bug
+description: Something is wrong with code, CI or a reported result.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behaviour
+      description: Include the command, the run_id if relevant, and the exact error.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Smallest command or test that shows the problem.
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Commit / run_id
