@@ -176,29 +176,37 @@ def github_json(url: str, token: str, method: str = "GET", payload: dict | None 
         return json.loads(response.read().decode("utf-8"))
 
 
-def find_existing_issue(repo: str, token: str, title: str, label: str = LABEL) -> dict | None:
-    """Return an open issue whose title matches exactly (case-insensitive)."""
-    url = f"https://api.github.com/repos/{repo}/issues?state=open&per_page=100"
-    if label:
-        url += f"&labels={urllib.parse.quote(label)}"
-    try:
-        items = github_json(url, token)
-    except urllib.error.HTTPError:
-        return None
-    if not isinstance(items, list):
-        return None
-    for item in items:
-        if "pull_request" in item:
-            continue
-        if item.get("title", "").strip().lower() == title.strip().lower():
-            return item
+def find_existing_issue(repo: str, token: str, title: str) -> dict | None:
+    """Return an open issue whose title matches exactly (case-insensitive).
+
+    Paginates all open issues and does not filter by label: the 422
+    fallback may create an unlabeled issue, which must still be found.
+    """
+    for page in range(1, 6):
+        url = (
+            f"https://api.github.com/repos/{repo}/issues"
+            f"?state=open&per_page=100&page={page}"
+        )
+        try:
+            items = github_json(url, token)
+        except urllib.error.HTTPError:
+            return None
+        if not isinstance(items, list) or not items:
+            return None
+        for item in items:
+            if "pull_request" in item:
+                continue
+            if item.get("title", "").strip().lower() == title.strip().lower():
+                return item
+        if len(items) < 100:
+            return None
     return None
 
 
 def create_or_comment_issue(
-    repo: str, token: str, title: str, body: str, labels: list[str], lookup_label: str | None = None
+    repo: str, token: str, title: str, body: str, labels: list[str]
 ) -> None:
-    existing = find_existing_issue(repo, token, title, lookup_label or (labels[0] if labels else ""))
+    existing = find_existing_issue(repo, token, title)
     if existing:
         github_json(
             f"https://api.github.com/repos/{repo}/issues/{existing['number']}/comments",
@@ -246,10 +254,22 @@ def _bullets(items: list[str]) -> list[str]:
     return [f"- {item}" for item in items] if items else ["- (none stated)"]
 
 
+def _as_dict(value) -> dict:
+    return value if isinstance(value, dict) else {}
+
+
+def _as_list(value) -> list:
+    return value if isinstance(value, list) else []
+
+
+def _dict_items(value) -> list[dict]:
+    return [item for item in _as_list(value) if isinstance(item, dict)]
+
+
 def research_report_body(
     review: dict, pr_number: int, pr_title: str, head_sha: str, backend: str
 ) -> str:
-    analysis = review.get("research_analysis") or {}
+    analysis = _as_dict(review.get("research_analysis"))
     lines = [
         f"# Research analysis — PR #{pr_number}",
         "",
@@ -257,6 +277,7 @@ def research_report_body(
         f"**Head:** `{head_sha}`",
         f"**Backend:** {backend}",
         f"**Verdict:** `{review.get('verdict', 'unknown')}`",
+        f"**Confidence:** `{analysis.get('confidence', 'unknown')}`",
         "",
         "## Summary",
         "",
@@ -276,27 +297,27 @@ def research_report_body(
         "",
         "## Missing analyses",
         "",
-        *_bullets(analysis.get("missing_analyses") or []),
+        *_bullets(_as_list(analysis.get("missing_analyses"))),
         "",
         "## Recommended next experiments",
         "",
-        *_bullets(analysis.get("next_experiments") or []),
+        *_bullets(_as_list(analysis.get("next_experiments"))),
         "",
         "## Prioritised recommendations",
         "",
     ]
-    recommendations = review.get("recommendations") or []
+    recommendations = _dict_items(review.get("recommendations"))
     if recommendations:
-        lines += ["| Priority | Kind | Recommendation |", "|---|---|---|"]
+        lines += ["| Priority | Kind | Recommendation | Detail |", "|---|---|---|---|"]
         for rec in recommendations:
             lines.append(
                 f"| {rec.get('priority', '?')} | {rec.get('kind', '?')} | "
-                f"{rec.get('title', '')} |"
+                f"{rec.get('title', '')} | {rec.get('detail', '')} |"
             )
     else:
         lines.append("(none)")
     lines += ["", "## Code findings", ""]
-    findings = review.get("findings") or []
+    findings = _dict_items(review.get("findings"))
     if findings:
         lines += ["| Severity | Area | Location | Finding |", "|---|---|---|---|"]
         for finding in findings:
@@ -320,16 +341,9 @@ def research_report_body(
 def file_research_report(
     repo: str, token: str, number: int, pr_title: str, head_sha: str, review: dict, backend: str
 ) -> None:
-    title = f"[research] PR #{number}: {pr_title[:80]}"
+    title = f"[research] PR #{number} analysis"
     body = research_report_body(review, number, pr_title, head_sha, backend)
-    create_or_comment_issue(
-        repo,
-        token,
-        title,
-        body,
-        ["research-review", "analysis"],
-        lookup_label="research-review",
-    )
+    create_or_comment_issue(repo, token, title, body, ["research-review", "analysis"])
 
 
 def file_recommendation(
@@ -344,18 +358,14 @@ def file_recommendation(
         "This issue is advisory. It does not block a merge; closing it is a "
         "research decision, not a CI state."
     )
-    create_or_comment_issue(
-        repo,
-        token,
-        title,
-        body,
-        ["research-review", "recommendation"],
-        lookup_label="research-review",
-    )
+    create_or_comment_issue(repo, token, title, body, ["research-review", "recommendation"])
 
 
 def is_research_diff(diff: str) -> bool:
-    changed = set(re.findall(r"^\+\+\+ b/(.+)$", diff, flags=re.M))
+    changed = set(
+        re.findall(r"^(?:\+\+\+ b/|--- a/)(\S+)$", diff, flags=re.M)
+    )
+    changed.discard("/dev/null")
     return any(path.startswith(("src/", "configs/", "results/")) for path in changed)
 
 
@@ -364,7 +374,10 @@ def parse_json(text: str) -> dict:
     end = text.rfind("}")
     if start < 0 or end <= start:
         raise ValueError("no JSON object in agent output")
-    return json.loads(text[start : end + 1])
+    data = json.loads(text[start : end + 1])
+    if not isinstance(data, dict):
+        raise ValueError("review JSON must be an object")
+    return data
 
 
 def format_comment(review: dict, pr_number: int, backend: str) -> str:
@@ -376,7 +389,7 @@ def format_comment(review: dict, pr_number: int, backend: str) -> str:
         f"**Verdict:** `{review.get('verdict', 'unknown')}`",
         "",
     ]
-    analysis = review.get("research_analysis") or {}
+    analysis = _as_dict(review.get("research_analysis"))
     if analysis:
         lines += ["## Research analysis", ""]
         if analysis.get("research_content") is False:
@@ -390,13 +403,13 @@ def format_comment(review: dict, pr_number: int, backend: str) -> str:
                 f"**Results:** {analysis.get('results', '')}",
                 "",
                 "**Missing analyses:**",
-                *_bullets(analysis.get("missing_analyses") or []),
+                *_bullets(_as_list(analysis.get("missing_analyses"))),
                 "",
                 "**Recommended next experiments:**",
-                *_bullets(analysis.get("next_experiments") or []),
+                *_bullets(_as_list(analysis.get("next_experiments"))),
             ]
         lines.append("")
-    recommendations = review.get("recommendations") or []
+    recommendations = _dict_items(review.get("recommendations"))
     if recommendations:
         lines += [
             "### Recommendations",
@@ -409,9 +422,14 @@ def format_comment(review: dict, pr_number: int, backend: str) -> str:
                 f"| {rec.get('priority', '?')} | {rec.get('kind', '?')} | "
                 f"{rec.get('title', '')} |"
             )
+        lines += ["", "**Recommendation details:**"]
+        lines += [
+            f"- **{rec.get('title', '')}** — {rec.get('detail', '')}"
+            for rec in recommendations
+        ]
         lines.append("")
     lines += ["## Code findings", ""]
-    findings = review.get("findings", [])
+    findings = _dict_items(review.get("findings"))
     if not findings:
         lines.append("No code findings.")
     else:
@@ -726,7 +744,7 @@ def main() -> int:
 
     post_comment(repo, number, token, format_comment(review, number, backend))
 
-    analysis = review.get("research_analysis") or {}
+    analysis = _as_dict(review.get("research_analysis"))
     if analysis and is_research_diff(diff):
         try:
             file_research_report(
@@ -741,7 +759,7 @@ def main() -> int:
         except Exception as exc:  # noqa: BLE001 - issue filing is best effort
             print(f"could not file research report: {exc}", file=sys.stderr)
 
-    for recommendation in review.get("recommendations", []):
+    for recommendation in _dict_items(review.get("recommendations")):
         if recommendation.get("priority") in {"high", "medium"}:
             try:
                 file_recommendation(
@@ -750,7 +768,7 @@ def main() -> int:
             except Exception as exc:  # noqa: BLE001
                 print(f"could not file recommendation: {exc}", file=sys.stderr)
 
-    for finding in review.get("findings", []):
+    for finding in _dict_items(review.get("findings")):
         if finding.get("severity") in {"high", "medium"}:
             try:
                 file_issue(repo, token, finding, number)

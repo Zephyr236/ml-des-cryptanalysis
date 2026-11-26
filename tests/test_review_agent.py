@@ -377,6 +377,8 @@ def test_is_research_diff():
     assert review_agent.is_research_diff("+++ b/src/des_ml/des.py\n")
     assert review_agent.is_research_diff("+++ b/configs/eval/x.yaml\n")
     assert review_agent.is_research_diff("+++ b/results/stage1/run/manifest.json\n")
+    assert review_agent.is_research_diff("--- a/src/des_ml/des.py\n+++ /dev/null\n")
+    assert review_agent.is_research_diff("--- a/configs/x.yaml\n+++ b/configs/y.yaml\n")
     assert not review_agent.is_research_diff("+++ b/docs/REVIEW-AGENT.md\n")
     assert not review_agent.is_research_diff("+++ b/.github/workflows/ci.yml\n")
 
@@ -401,17 +403,16 @@ def test_create_or_comment_issue_retries_without_labels(monkeypatch):
 def test_file_research_report_uses_research_labels(monkeypatch):
     captured = {}
 
-    def fake_create(repo, token, title, body, labels, lookup_label=None):
-        captured.update(title=title, labels=labels, lookup=lookup_label, body=body)
+    def fake_create(repo, token, title, body, labels):
+        captured.update(title=title, labels=labels, body=body)
 
     monkeypatch.setattr(review_agent, "create_or_comment_issue", fake_create)
     review_agent.file_research_report(
         "o/r", "t", 7, "TH-1", "a" * 40, _research_review(), "backend"
     )
-    assert captured["title"].startswith("[research] PR #7")
+    assert captured["title"] == "[research] PR #7 analysis"
     assert "research-review" in captured["labels"]
     assert "analysis" in captured["labels"]
-    assert captured["lookup"] == "research-review"
 
 
 def test_main_files_research_report_for_research_diff(monkeypatch, tmp_path):
@@ -442,3 +443,38 @@ def test_main_files_research_report_for_research_diff(monkeypatch, tmp_path):
     assert posted
     assert reports == [7]
     assert recommendations == ["Add a budget-matched baseline"]
+
+
+def test_find_existing_issue_is_unlabeled_and_paginates(monkeypatch):
+    filler = [{"number": n, "title": f"other-{n}"} for n in range(100)]
+    pages = {
+        1: filler,
+        2: [{"number": 200, "title": "Target Title"}],
+    }
+
+    def fake_github_json(url, token, method="GET", payload=None):
+        page = int(url.split("&page=")[1].split("&")[0])
+        return pages.get(page, [])
+
+    monkeypatch.setattr(review_agent, "github_json", fake_github_json)
+    found = review_agent.find_existing_issue("o/r", "t", "target title")
+    assert found["number"] == 200
+
+
+def test_parse_json_rejects_non_object():
+    with pytest.raises(ValueError):
+        review_agent.parse_json("[1, 2, 3]")
+
+
+def test_format_comment_tolerates_malformed_shapes():
+    review = {
+        "summary": "",
+        "verdict": "sound",
+        "research_analysis": ["not", "a", "dict"],
+        "findings": "not a list",
+        "recommendations": [1, {"priority": "high", "kind": "experiment", "title": "T", "detail": "D"}],
+    }
+    text = review_agent.format_comment(review, 1, "backend")
+    assert "No code findings." in text
+    assert "T" in text
+    assert "Recommendation details" in text
