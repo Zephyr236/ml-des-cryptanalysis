@@ -1,0 +1,21 @@
+run_name: smoke
+rounds: 2
+mode: kpa
+delta: null
+model:
+  name: pair_cnn
+  channels: 16
+  blocks: 1
+  dropout: 0.0
+train:
+  batch_size: 32
+  steps: 3
+  lr: 0.001
+  weight_decay: 0.01
+  log_every: 1
+  eval_every: 2
+  eval_batches: 1
+  seed: 0
+  device: cpu
+data:
+  negative_fraction: 0.5
