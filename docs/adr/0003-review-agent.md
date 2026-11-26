@@ -24,8 +24,19 @@ as issues.
 1. `.github/workflows/code-review.yml` runs
    [`scripts/ci/review_agent.py`](../../scripts/ci/review_agent.py) on
    every `pull_request` event.
-2. The agent is built with `claude-agent-sdk` (Python) and the Claude
-   Code CLI installed in the runner.
+2. The agent has two transports that share one rubric, one JSON schema
+   and one issue policy:
+   - **Claude Agent SDK** (`claude-agent-sdk` + the Claude Code CLI)
+     when `ANTHROPIC_API_KEY` or `CLAUDE_CODE_OAUTH_TOKEN` is present.
+   - **OpenCode Zen Go** through its OpenAI-compatible Chat Completions
+     endpoint when `OPENCODE_ZEN_API_KEY` is present. Default base URL
+     `https://opencode.ai/inference/go/openai/v1`, default model
+     `deepseek-v4.1-flash`. A stable `x-opencode-session` is derived
+     from `repo#PR`; requests identify themselves as
+     `ml-des-review/1.0`. This transport has no repository tools, so the
+     prompt carries the diff (truncated at 90k characters) and the
+     manifest summaries.
+   The OpenCode transport is preferred when both are configured.
 3. **It can only comment and open issues.** The job is
    `continue-on-error: true`, the script always exits 0, and the check
    is deliberately absent from branch protection. This mirrors the
@@ -44,8 +55,10 @@ as issues.
 7. **Missing credentials skip, not fail.** If neither
    `ANTHROPIC_API_KEY` nor `CLAUDE_CODE_OAUTH_TOKEN` is configured, the
    job posts a notice and exits successfully.
-8. **Model is configurable** through `REVIEW_MODEL`; the default is
-   `claude-sonnet-5-5`.
+8. **Models are configurable.** The Claude transport reads
+   `REVIEW_MODEL` (default `claude-sonnet-5-5`); the OpenCode transport
+   reads `OPENCODE_MODEL` (default `deepseek-v4.1-flash`) and
+   `OPENCODE_BASE_URL`.
 
 ## Consequences
 
@@ -57,8 +70,13 @@ as issues.
 - The agent cannot verify claims that require running training. It can
   check that a manifest exists and that its metrics support the PR's
   sentences, but the scientific judgement remains human.
-- The repository must hold an API key as an Actions secret. That key is
-  never exposed to the agent's tools; only the SDK process reads it.
+- The repository must hold at least one model credential as an Actions
+  secret (`OPENCODE_ZEN_API_KEY`, `ANTHROPIC_API_KEY`, or
+  `CLAUDE_CODE_OAUTH_TOKEN`). The key is never exposed to the agent's
+  tools; only the transport process reads it.
+- The OpenCode transport cannot read files outside the prompt, so a
+  review of a very large diff sees a truncated view. The deterministic
+  gates remain the authority for anything the prompt cannot show.
 
 ## Alternatives considered
 
