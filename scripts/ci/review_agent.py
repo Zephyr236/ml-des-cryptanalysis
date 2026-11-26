@@ -454,8 +454,11 @@ def main() -> int:
     # The Claude transport has Read/Grep/Glob. On pull_request_target the
     # diff is untrusted PR content, and a prompt injection could ask the
     # agent to read files outside the repository and repeat them in a
-    # comment. Only the tool-less OpenCode transport may review PRs.
-    if backend_kind == "claude" and os.environ.get("GITHUB_EVENT_NAME") == "pull_request_target":
+    # comment. Use an allowlist: tools are only available for local runs
+    # (no event name) and explicitly trusted dispatches.
+    tool_trusted_events = {"", "workflow_dispatch"}
+    event_name = os.environ.get("GITHUB_EVENT_NAME", "")
+    if backend_kind == "claude" and event_name not in tool_trusted_events:
         if not dry_run:
             post_comment(
                 repo,

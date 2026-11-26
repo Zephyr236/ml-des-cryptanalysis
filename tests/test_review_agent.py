@@ -258,3 +258,16 @@ def test_main_disables_claude_on_pull_request_target(monkeypatch, tmp_path):
     assert review_agent.main() == 0
     assert "disabled" in posted[-1].lower()
     assert "OPENCODE_ZEN_API_KEY" in posted[-1]
+
+
+def test_main_dry_run_disables_claude_without_posting(monkeypatch, tmp_path):
+    monkeypatch.delenv("OPENCODE_ZEN_API_KEY", raising=False)
+    monkeypatch.delenv("OPENCODE_API_KEY", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic")
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request_target")
+    _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
+    monkeypatch.setattr(sys, "argv", ["review_agent.py", "--dry-run"])
+    posted = []
+    monkeypatch.setattr(review_agent, "post_comment", lambda *a, **k: posted.append(a))
+    assert review_agent.main() == 0
+    assert posted == []

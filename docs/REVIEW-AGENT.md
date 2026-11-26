@@ -24,11 +24,16 @@ PR-controlled code. The base URL must be `https://opencode.ai/...` unless
 `OPENCODE_ALLOW_CUSTOM_BASE_URL=1` opts into a proxy, and cross-origin
 redirects are refused so the bearer token is never forwarded.
 
-The tool-enabled Claude transport is **disabled on
-`pull_request_target`**: Read/Grep/Glob plus an untrusted diff would let
-a prompt injection read files outside the repository and repeat them in
-a comment. PR reviews use the tool-less OpenCode transport; the Claude
-transport remains available for trusted dispatches.
+The tool-enabled Claude transport is **disabled on untrusted events**
+(an allowlist: local runs and `workflow_dispatch` only): Read/Grep/Glob
+plus an untrusted diff would let a prompt injection read files outside
+the repository and repeat them in a comment. PR reviews use the
+tool-less OpenCode transport. On an untrusted event with only Claude
+credentials, a `--dry-run` exits without posting.
+
+The tool-less transport cannot read files, but injected diff text can
+still shape the wording of the public comment. Treat every review as
+advisory and check its claims against the deterministic gates.
 
 Manifest metrics are claims, not verified facts. The `results-gate`
 independently checks the manifest schema, `code_sha`, config hash and a
