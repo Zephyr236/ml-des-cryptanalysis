@@ -35,6 +35,11 @@ def main() -> int:
     parser.add_argument("--rounds", type=int, default=6)
     parser.add_argument("--top-k", type=int, default=2)
     parser.add_argument("--known-boxes", type=int, default=8)
+    parser.add_argument(
+        "--full-boxes",
+        default="",
+        help="comma-separated S-box indices to enumerate fully",
+    )
     parser.add_argument("--max-combos", type=float, default=2_000_000)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--seed", type=int, default=0)
@@ -51,8 +56,12 @@ def main() -> int:
 
     top = torch.topk(scores, args.top_k, dim=1).indices
     trusted = list(range(args.known_boxes))
+    full_boxes = {
+        int(value.strip()) for value in args.full_boxes.split(",") if value.strip()
+    }
     candidate_lists = [
-        top[j].tolist() if j in trusted else list(range(64)) for j in range(8)
+        list(range(64)) if j in full_boxes or j not in trusted else top[j].tolist()
+        for j in range(8)
     ]
     combos = 1
     for values in candidate_lists:
@@ -74,6 +83,7 @@ def main() -> int:
             "rounds": args.rounds,
             "top_k": args.top_k,
             "known_boxes": args.known_boxes,
+            "full_boxes": args.full_boxes,
         },
         config_path="scripts/recover_from_scores.py",
         seed=args.seed,
