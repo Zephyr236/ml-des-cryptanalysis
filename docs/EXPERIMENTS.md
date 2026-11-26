@@ -39,6 +39,30 @@ memory smoke passes; a GPU job produces a committed manifest.
 CI excludes 0.5; leak canary at chance. If DG-4 is at chance, diagnose
 before any key-recovery run.
 
+## DDT rank baseline (TH-3 partial, 2026-11-26)
+
+Exact log-DDT scoring of all 64 last-round chunks, 128 key-disjoint test
+keys x 64 pairs per key. The "one-bit delta" rows use CPA with
+`delta = 0x0000000000000001`; KPA uses uniform random plaintexts. Mean
+rank 32.5 and top-1 1/64 are chance.
+
+| R | Mode | Mean rank | Top-1 | Run |
+|---|---|---|---|---|
+| 4 | CPA | 33.60 | 0.0146 | `20261126T084132Z-c72525e7-ab1bb162-s0` |
+| 4 | KPA | 32.52 | 0.0127 | `20261126T084139Z-c72525e7-be5f91bb-s0` |
+| 6 | CPA | 32.05 | 0.0195 | `20261126T084146Z-c72525e7-b03b4b73-s0` |
+| 6 | KPA | 32.16 | 0.0176 | `20261126T084152Z-c72525e7-e5cedf94-s0` |
+| 8 | CPA | 32.92 | 0.0127 | `20261126T084157Z-c72525e7-112b0abb-s0` |
+| 8 | KPA | 32.41 | 0.0107 | `20261126T084202Z-c72525e7-e37489ed-s0` |
+
+**Interpretation.** Unfiltered pairs and a one-bit delta carry no usable
+last-round DDT signal at 64 pairs across R=4-8. This is not a refutation
+of classical differential attacks: those select a high-probability
+characteristic and keep right pairs. It establishes that TH-1 trail
+selection and right-pair filtering are prerequisites for DG-4, not
+optional refinements. The SPADE residual must be initialised from a real
+characteristic, not from an arbitrary delta.
+
 ## Stage 2 — key recovery
 
 | ID | R | Pipeline | Primary metric | Status |

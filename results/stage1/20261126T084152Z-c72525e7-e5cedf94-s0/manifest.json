@@ -1,0 +1,64 @@
+{
+  "artifacts": [
+    "config.yaml",
+    "metrics.json",
+    "metrics.jsonl",
+    "per_sbox.json",
+    "train.log"
+  ],
+  "code_sha": "c72525e7774f1e11bb9d6ee79dc897f2b71dc647",
+  "command": "python scripts/ddt_rank.py --config D:\\research\\ml-des\\repo\\configs\\eval\\ddt-rank-des6-kpa.yaml --out results/stage1",
+  "config_path": "D:\\research\\ml-des\\repo\\configs\\eval\\ddt-rank-des6-kpa.yaml",
+  "config_sha256": "e5cedf9405899ca757a3e1a326bdf8b571fcde8acff19735d09b55ca41840918",
+  "created_at": "2026-11-26T08:41:52Z",
+  "environment": {
+    "cuda": "12.4",
+    "cuda_available": true,
+    "gpu": "NVIDIA GeForce RTX 2060",
+    "machine": "AMD64",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.16",
+    "torch": "2.6.0+cu124"
+  },
+  "git_dirty": false,
+  "metrics": {
+    "best": {
+      "delta_is_zero": 0.0,
+      "keys": 128.0,
+      "mean_rank": 32.15771484375,
+      "median_rank": 32.0,
+      "n_chunks": 1024.0,
+      "pairs_per_key": 64.0,
+      "random_mean_rank": 32.5,
+      "random_top1": 0.015625,
+      "rounds": 6.0,
+      "top1": 0.017578125,
+      "top16": 0.265625,
+      "top5": 0.095703125
+    },
+    "final": {
+      "delta_is_zero": 0.0,
+      "keys": 128.0,
+      "mean_rank": 32.15771484375,
+      "median_rank": 32.0,
+      "n_chunks": 1024.0,
+      "pairs_per_key": 64.0,
+      "random_mean_rank": 32.5,
+      "random_top1": 0.015625,
+      "rounds": 6.0,
+      "top1": 0.017578125,
+      "top16": 0.265625,
+      "top5": 0.095703125
+    }
+  },
+  "run_id": "20261126T084152Z-c72525e7-e5cedf94-s0",
+  "schema_version": 1,
+  "seed": 0,
+  "status": "completed",
+  "tags": {
+    "kind": "ddt-rank",
+    "mode": "kpa",
+    "rounds": 6,
+    "stage": "stage1"
+  }
+}

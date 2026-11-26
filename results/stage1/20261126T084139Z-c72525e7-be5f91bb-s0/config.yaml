@@ -1,0 +1,7 @@
+run_name: ddt-rank-des4-kpa
+rounds: 4
+mode: kpa
+delta: null
+keys: 128
+pairs: 64
+seed: 0

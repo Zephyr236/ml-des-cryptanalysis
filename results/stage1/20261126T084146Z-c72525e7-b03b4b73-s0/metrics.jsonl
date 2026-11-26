@@ -1,0 +1,1 @@
+{"step": 0, "mean_rank": 32.04736328125, "median_rank": 31.0, "top1": 0.01953125, "top5": 0.087890625, "top16": 0.2568359375, "random_mean_rank": 32.5, "random_top1": 0.015625, "n_chunks": 1024.0, "rounds": 6.0, "keys": 128.0, "pairs_per_key": 64.0, "delta_is_zero": 0.0}

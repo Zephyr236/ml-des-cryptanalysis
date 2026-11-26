@@ -1,3 +1,20 @@
+## 2026-11-26 — DDT rank baseline is at chance without a characteristic
+
+**What.** Six exact log-DDT runs: R=4/6/8, KPA and CPA (one-bit delta),
+128 key-disjoint test keys x 64 pairs. Mean rank of the true last-round
+chunk stays near 32.5 and top-1 near 1/64 in every cell.
+
+**Interpretation.** Unfiltered pairs carry no usable last-round DDT
+signal at this budget. Classical differential attacks do not use
+unfiltered pairs: they choose a high-probability characteristic and keep
+right pairs. The result therefore does not test SPADE's DDT-initialised
+scorer; it says the initialisation must come from a real characteristic
+and that pair filtering is a prerequisite. A "no signal" claim must
+always name the delta, the filtering rule and the pair budget.
+
+**Next.** TH-1 trail search, then re-run the rank baseline with the best
+characteristic and right-pair filtering before training DG-4.
+
 ## 2026-11-26 — Merge provenance fix
 
 **What.** Squash merge rewrites branch commits, so the manifests merged
