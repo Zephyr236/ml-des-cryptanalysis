@@ -130,4 +130,12 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except SystemExit:
+        raise
+    except BaseException:
+        import traceback
+
+        Path("last_error.txt").write_text(traceback.format_exc(), encoding="utf-8")
+        raise
