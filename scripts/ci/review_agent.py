@@ -50,9 +50,11 @@ OPENCODE_BASE_URL = os.environ.get(
 ).rstrip("/")
 OPENCODE_MODEL = os.environ.get("OPENCODE_MODEL", "deepseek-v4.1-flash")
 try:
-    OPENCODE_MAX_TOKENS = int(os.environ.get("OPENCODE_MAX_TOKENS", "32000"))
+    # The 23k-character PR diff produced ~42k characters of reasoning and
+    # a 9k-character review; 32k tokens was truncated.
+    OPENCODE_MAX_TOKENS = int(os.environ.get("OPENCODE_MAX_TOKENS", "64000"))
 except ValueError:
-    OPENCODE_MAX_TOKENS = 32000
+    OPENCODE_MAX_TOKENS = 64000
 
 SYSTEM_PROMPT = """You are the independent reviewer for a machine-learning
 cryptanalysis research repository. You review pull requests for both code
@@ -308,7 +310,7 @@ def call_opencode(prompt: str, model: str, session: str, api_key: str) -> str:
             },
         )
         try:
-            with urllib.request.urlopen(request, timeout=600) as response:
+            with urllib.request.urlopen(request, timeout=900) as response:
                 data = json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             if exc.code in {429, 500, 502, 503, 504} and attempt < 2:
