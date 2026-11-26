@@ -417,7 +417,9 @@ def build_prompt(diff: str, pr: dict | None = None) -> str:
         metadata
         + "Review this pull request.\n\n"
         "Result manifests already on the base branch. Only a manifest with "
-        "`changed_by_pr: true` is evidence for this PR; the rest are history:\n"
+        "`changed_by_pr: true`, or a manifest added in the diff, is evidence "
+        "for this PR; the rest are history. Changed manifest paths in this "
+        f"PR: {sorted(changed) if changed else '(none)'}\n"
         + ("\n".join(manifests[:20]) if manifests else "(none)")
         + "\n\nUnified diff (truncated):\n```diff\n"
         + diff[:MAX_DIFF_CHARS]
