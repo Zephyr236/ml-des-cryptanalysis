@@ -19,6 +19,10 @@ Rules:
 - Weight files (`*.pt`) are ignored by git; put a hash and a path in the
   manifest instead.
 - `results/LATEST.json` must be updated by the same PR that adds the run.
+- Runs merged before the merge-commit policy (PR #12 and PR #14) are
+  preserved by the `archive/pr-12-head` and `archive/pr-14-head` tags.
+  Verify a pre-policy `code_sha` with
+  `git merge-base --is-ancestor <sha> archive/pr-12-head` (or `-14`).
 
 Schema and helpers: [`src/des_ml/manifest.py`](../src/des_ml/manifest.py).
 Protocol: [ADR-0002](../docs/adr/0002-experiment-protocol.md).

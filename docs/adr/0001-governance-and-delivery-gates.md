@@ -20,8 +20,16 @@ can quietly move `main`.
 ## Decision
 
 1. **`main` is protected.** No direct pushes, no force-pushes, no
-   deletion, linear history, squash merges only, conversation
-   resolution required, and the protection applies to administrators.
+   deletion, **merge commits only by policy** (the linear-history
+   requirement is off), conversation resolution required, and the
+   protection applies to administrators. The reason is provenance: a
+   manifest records the commit that produced it, so that commit must
+   remain an ancestor of `main`. Squash and rebase rewrite branch
+   commits and would leave every result pointing at an unreachable SHA.
+   GitHub refuses to let a repository disable both squash and rebase,
+   so squash remains enabled in settings but is forbidden by policy;
+   the `main-provenance` workflow audits every push and opens an issue
+   if a non-merge commit lands on `main`.
 2. **Required status checks:** `ci`, `adr-guard`, `adr-numbers`,
    `link-check`, `release-blockers`, `results-gate`, `issue-gate`.
 3. **Issue gate.** A PR must close at least one issue (`Closes #N`) or
@@ -54,8 +62,15 @@ can quietly move `main`.
 - The issue gate can be gamed with a throwaway issue. That is accepted:
   the gate is a forcing function for writing down hypotheses, not a
   security boundary.
-- Squash merging keeps `main` linear and makes `code_sha` in manifests
-  easy to trace.
+- Merge commits make `main` non-linear, but they keep every PR commit
+  reachable. A manifest's `code_sha` remains an ancestor of `main` after
+  the merge, which is what the reproducibility claim requires. The two
+  bootstrap PRs that were squash-merged before this decision have their
+  heads preserved as `archive/pr-12-head` and `archive/pr-14-head`
+  tags.
+- The push audit cannot prevent a squash merge; it makes the violation
+  visible immediately and files an issue. Prevention is a human/agent
+  policy, enforced by review and by the merge command in the runbook.
 - Agents must learn the workflow from [`AGENTS.md`](../../AGENTS.md);
   the rules are not discoverable from GitHub settings alone.
 

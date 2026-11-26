@@ -91,8 +91,9 @@ baselines and smoke tests, not the SPADE plan.
 ## Governance
 
 Research is managed as a project: issues carry hypotheses, branches are
-short-lived, `main` only accepts pull requests, and every code-changing
-PR must ship a run manifest produced on the GPU host.
+short-lived, `main` only accepts pull requests merged with a merge commit
+(provenance audited), and every code-changing PR must ship a run manifest
+produced on the GPU host.
 
 - Rules for humans and agents: [`AGENTS.md`](AGENTS.md)
 - Decisions: [`docs/adr/`](docs/adr)

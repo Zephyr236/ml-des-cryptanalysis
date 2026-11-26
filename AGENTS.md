@@ -22,7 +22,7 @@
 
 ## 1. 不可协商的规则
 
-1. **`main` 只接受 Pull Request。** 分支保护开启后，任何人（包括管理员）不得直接 push、不得 force-push、不得删除 `main`。唯一的例外是仓库初始化时的第一个 commit，已在 ADR-0001 中记录。
+1. **`main` 只接受 Pull Request。** 分支保护开启后，任何人（包括管理员）不得直接 push、不得 force-push、不得删除 `main`。**只允许 merge commit，禁止 squash 和 rebase**：manifest 里的 `code_sha` 必须在合并后仍是 `main` 的祖先，否则结果不可复现。GitHub 设置里 squash 仍然可点（平台要求至少保留一种重写方式），但使用它会被 `main-provenance` 审计并在 issue 中记录。唯一的例外是仓库初始化时的第一个 commit，已在 ADR-0001 中记录。
 2. **每个 PR 必须关闭至少一个 issue。** PR 正文使用 `Closes #N`；纯文档/杂务 PR 可以用 `No-Issue: <至少 10 字的理由>` 豁免。所有被 `Refs #N` 引用的 issue 必须在合并前关闭。
 3. **每个改变代码或配置的 PR 必须附带运行结果。** 结果以 `results/**/manifest.json` 的形式提交，manifest 的 `code_sha` 必须是本 PR 历史中的提交；同时更新 `results/LATEST.json`。纯文档 PR 使用 `Results-Exempt: <理由>`。
 4. **每个改变 `src/**`、`configs/**`、`scripts/**` 的 PR 必须新增或修改一份 ADR**（`docs/adr/NNNN-*.md`），或由 PR 正文的 `ADR-Exempt: <理由>` 豁免。这是 delivery-gates 的 ADR Guard。
@@ -215,7 +215,7 @@ results/<stage>/<run_id>/
 6. **提交**：代码与结果分开 commit，但同一个 PR；commit message 写清运行 id。
 7. **开 PR**：填模板（Summary / Linked issues / Results / Risk），关联 issue。
 8. **等门禁**：修到全绿；评审 agent 的 issue 逐条回应（关闭或开 follow-up）。
-9. **Squash merge**，删除分支。
+9. **Merge commit**（不是 squash/rebase），删除分支。合并后确认 `code_sha` 指向的提交仍是 `main` 的祖先（`git merge-base --is-ancestor <sha> main`）。
 10. **更新 `docs/RESEARCH-LOG.md`**：一句话记录这次学到了什么。
 
 Commit message 约定：`<type>(<scope>): <summary>`，type ∈ `feat|fix|exp|docs|chore|ci|test`。不要把多个不相关实验塞进一个 PR。
