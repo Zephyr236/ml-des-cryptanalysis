@@ -111,6 +111,10 @@ def main() -> int:
     )
 
     counts = torch.zeros((8, 64), dtype=torch.long, device=device)
+    kept_plain1: list[torch.Tensor] = []
+    kept_plain2: list[torch.Tensor] = []
+    kept_cipher1: list[torch.Tensor] = []
+    kept_cipher2: list[torch.Tensor] = []
     filtered_pairs = 0
     start = time.perf_counter()
     done = 0
@@ -131,32 +135,51 @@ def main() -> int:
             kept = int(mask.sum().item())
             filtered_pairs += kept
             if kept:
-                r1 = right1[:, mask]
-                r2 = right2[:, mask]
-                l1 = left1[:, mask]
-                l2 = left2[:, mask]
-                rdiff = r1 ^ r2
-                inputs1 = sbox_inputs(l1)
-                inputs2 = sbox_inputs(l2)
-                for j in range(8):
-                    u1 = inputs1[..., j]
-                    u2 = inputs2[..., j]
-                    outputs = (
-                        lut[j][u1.unsqueeze(-1) ^ candidates]
-                        ^ lut[j][u2.unsqueeze(-1) ^ candidates]
-                    )
-                    prep = outputs << (28 - 4 * j)
-                    corrected = rdiff.unsqueeze(-1) ^ permute_torch(prep, P, 32)
-                    match = torch.ones_like(corrected, dtype=torch.bool)
-                    for bit_index, position in enumerate(positions[j]):
-                        match &= ((corrected >> (31 - position)) & 1) == target_bits[j][bit_index]
-                    counts[j] += match.sum(dim=0)
+                kept_plain1.append(plaintext1[mask].clone())
+                kept_plain2.append(plaintext2[mask].clone())
+                kept_cipher1.append(ciphertext1[:, mask].clone())
+                kept_cipher2.append(ciphertext2[:, mask].clone())
         done += n
         if done % (args.batch * 20) == 0 or done == args.pairs:
             elapsed = time.perf_counter() - start
             message = f"pairs={done} kept={filtered_pairs} rate={done / elapsed:.0f}/s"
             writer.log(message)
             print(message, flush=True)
+
+    kept_blocks = None
+    if filtered_pairs:
+        c1 = torch.cat(kept_cipher1, dim=1).reshape(-1)
+        c2 = torch.cat(kept_cipher2, dim=1).reshape(-1)
+        r1, l1, r2, l2 = last_round_context(c1, c2)
+        inputs1 = sbox_inputs(l1)
+        inputs2 = sbox_inputs(l2)
+        rdiff = r1 ^ r2
+        count_rows = []
+        for j in range(8):
+            u1 = inputs1[..., j]
+            u2 = inputs2[..., j]
+            outputs = (
+                lut[j][u1.unsqueeze(-1) ^ candidates]
+                ^ lut[j][u2.unsqueeze(-1) ^ candidates]
+            )
+            prep = outputs << (28 - 4 * j)
+            corrected = rdiff.unsqueeze(-1) ^ permute_torch(prep, P, 32)
+            match = torch.ones_like(corrected, dtype=torch.bool)
+            for bit_index, position in enumerate(positions[j]):
+                match &= ((corrected >> (31 - position)) & 1) == target_bits[j][bit_index]
+            row = match.to(torch.long).sum(dim=0).reshape(-1)
+            if row.numel() != 64:
+                raise RuntimeError(f"match row has {row.numel()} entries, expected 64")
+            count_rows.append(row)
+        counts = torch.stack(count_rows, dim=0)
+        kept_blocks = [
+            {
+                "p1": [f"0x{int(v) & MASK64:016X}" for v in torch.cat(kept_plain1).tolist()],
+                "p2": [f"0x{int(v) & MASK64:016X}" for v in torch.cat(kept_plain2).tolist()],
+                "c1": [f"0x{int(v) & MASK64:016X}" for v in c1.tolist()],
+                "c2": [f"0x{int(v) & MASK64:016X}" for v in c2.tolist()],
+            }
+        ]
 
     true_scores = counts.gather(1, truth.unsqueeze(1)).squeeze(1)
     greater = (counts > true_scores.unsqueeze(1)).sum(dim=1)
@@ -174,6 +197,8 @@ def main() -> int:
         "true_chunks": [int(value) for value in truth.tolist()],
         "ranks": [float(value) for value in ranks.tolist()],
     }
+    if kept_blocks is not None:
+        details["filtered"] = kept_blocks[0]
     (writer.path / "scores.json").write_text(
         json.dumps({"scores": counts.cpu().tolist(), "details": details}),
         encoding="utf-8",
