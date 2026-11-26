@@ -456,7 +456,7 @@ def main() -> int:
     # outside the repository and repeat them in a comment. It is therefore
     # disabled unless a human opts in *and* the event is a trusted one.
     event_name = os.environ.get("GITHUB_EVENT_NAME", "")
-    trusted_event = event_name in {"", "workflow_dispatch"}
+    trusted_event = event_name == "workflow_dispatch"
     tools_opted_in = os.environ.get("ALLOW_TOOL_TRANSPORT") == "1"
     if backend_kind == "claude" and not (trusted_event and tools_opted_in):
         if not dry_run:
@@ -466,8 +466,8 @@ def main() -> int:
                 token,
                 "## Automated review (advisory)\n\n"
                 "Review agent skipped: the tool-enabled Claude transport "
-                "requires `ALLOW_TOOL_TRANSPORT=1` on a trusted event "
-                "(local or `workflow_dispatch`). PR reviews use the "
+                "requires `ALLOW_TOOL_TRANSPORT=1` on a `workflow_dispatch` "
+                "event. PR reviews use the "
                 "tool-less OpenCode transport; configure "
                 "`OPENCODE_ZEN_API_KEY`.\n\n"
                 "<sub>Non-blocking by design (ADR-0003).</sub>",

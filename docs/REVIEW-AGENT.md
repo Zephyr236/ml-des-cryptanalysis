@@ -23,15 +23,21 @@ file from the PR is executed. This keeps the key out of PR-controlled
 code execution, but the model still reads untrusted diff text; the
 review is advisory, not an authority. The base URL must be `https://opencode.ai/...` unless
 `OPENCODE_ALLOW_CUSTOM_BASE_URL=1` opts into a proxy, and cross-origin
-redirects are refused so the bearer token is never forwarded.
+redirects are refused so the bearer token is never forwarded. These two
+properties are covered by
+`tests/test_review_agent.py::test_validate_base_url_requires_opencode_host`
+and `::test_cross_origin_redirect_refused`.
 
 The tool-enabled Claude transport is **disabled unless
-`ALLOW_TOOL_TRANSPORT=1`** is set for a trusted run. CI does not set it:
+`ALLOW_TOOL_TRANSPORT=1` and `GITHUB_EVENT_NAME=workflow_dispatch`** are
+both set. CI sets neither:
 Read/Grep/Glob plus an untrusted diff would let a prompt injection read
 files outside the repository and repeat them in a comment. PR reviews use
-the tool-less OpenCode transport. Without the opt-in, a run with only
-Claude credentials posts a skip notice; a `--dry-run` exits without
-posting (it prints a skip line and exits 0).
+the tool-less OpenCode transport. Without both, a run with only
+Claude credentials posts a skip notice; a `--dry-run` prints a skip line
+and exits 0 without posting. A local test must set
+`GITHUB_EVENT_NAME=workflow_dispatch` explicitly; an empty event name is
+not trusted.
 
 The tool-less transport cannot read files, but injected diff text can
 still shape the wording of the public comment. Treat every review as
@@ -56,7 +62,7 @@ result.
 | `OPENCODE_MODEL` | `deepseek-v4.1-flash` | model id |
 | `OPENCODE_MAX_TOKENS` | `64000` | output budget; reasoning consumes most of it |
 | `REVIEW_MODEL` | `claude-sonnet-5-5` | Claude transport model |
-| `ALLOW_TOOL_TRANSPORT` | unset | set to `1` to permit Read/Grep/Glob on a trusted run |
+| `ALLOW_TOOL_TRANSPORT` | unset | set to `1` (with `GITHUB_EVENT_NAME=workflow_dispatch`) to permit Read/Grep/Glob |
 
 Set the secret with `gh secret set OPENCODE_ZEN_API_KEY -R <owner>/<repo>`.
 Never commit the key.

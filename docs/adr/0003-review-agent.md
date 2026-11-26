@@ -43,12 +43,14 @@ as issues.
    OpenCode call posts a non-blocking notice; it does not silently retry
    through Claude.
 
-   The tool-enabled Claude transport is **disabled unless
-   `ALLOW_TOOL_TRANSPORT=1`** is explicitly set. The diff is untrusted PR
+   The tool-enabled Claude transport is **disabled unless both
+   `ALLOW_TOOL_TRANSPORT=1` and `GITHUB_EVENT_NAME=workflow_dispatch`**
+   are set. The diff is untrusted PR
    content, and Read/Grep/Glob could be prompt-injected into reading files
    outside the repository and repeating them in a public comment. CI does
    not set the opt-in; PR reviews run on the tool-less OpenCode
-   transport. The opt-in exists only for a trusted, human-run dispatch.
+   transport. The opt-in exists only for a trusted, human-run dispatch; an empty event
+   name is not trusted.
 3. **It can only comment and open issues.** The job is
    `continue-on-error: true`, the script always exits 0, and the check
    is deliberately absent from branch protection. This mirrors the
