@@ -1,0 +1,65 @@
+{
+  "artifacts": [
+    "config.yaml",
+    "metrics.json",
+    "metrics.jsonl",
+    "tables/ddt.json",
+    "tables/key_schedule_coverage.json",
+    "tables/lat.json",
+    "train.log"
+  ],
+  "code_sha": "5b997b4e297cc687e9376548921e9921080ee9f3",
+  "command": "python scripts/theory_report.py",
+  "config_path": "scripts/theory_report.py",
+  "config_sha256": "3f6839651d693f41523bf6ce62b1ce4995cd6143dc1be82ccfdf2b1530c6b69d",
+  "created_at": "2026-11-26T08:26:18Z",
+  "environment": {
+    "cuda": null,
+    "cuda_available": false,
+    "gpu": null,
+    "machine": "x86_64",
+    "platform": "Linux-6.8.0-151-generic-x86_64-with-glibc2.39",
+    "python": "3.12.3",
+    "torch": "2.15.0+cpu"
+  },
+  "git_dirty": false,
+  "metrics": {
+    "best": {
+      "completions_per_round_key": 256.0,
+      "coverage_all_rounds": 56.0,
+      "coverage_round1": 48.0,
+      "coverage_rounds_1_2": 56.0,
+      "ddt_row_sums_ok": 1.0,
+      "differential_uniformity": 0.25,
+      "keys_checked": 16.0,
+      "lat_balance_ok": 1.0,
+      "max_ddt_entry_nonzero": 16.0,
+      "max_lat_abs_nontrivial": 40.0,
+      "max_linear_correlation": 0.625,
+      "recovery_pass": 1.0
+    },
+    "final": {
+      "completions_per_round_key": 256.0,
+      "coverage_all_rounds": 56.0,
+      "coverage_round1": 48.0,
+      "coverage_rounds_1_2": 56.0,
+      "ddt_row_sums_ok": 1.0,
+      "differential_uniformity": 0.25,
+      "keys_checked": 16.0,
+      "lat_balance_ok": 1.0,
+      "max_ddt_entry_nonzero": 16.0,
+      "max_lat_abs_nontrivial": 40.0,
+      "max_linear_correlation": 0.625,
+      "recovery_pass": 1.0
+    }
+  },
+  "run_id": "20261126T082618Z-5b997b4e-3f683965-s0",
+  "schema_version": 1,
+  "seed": 0,
+  "status": "completed",
+  "tags": {
+    "kind": "theory",
+    "stage": "stage1",
+    "suite": "th-1-partial"
+  }
+}

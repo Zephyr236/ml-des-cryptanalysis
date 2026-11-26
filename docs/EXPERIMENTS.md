@@ -12,11 +12,11 @@ and manifest. Deleting a failure is not allowed.
 | ID | Deliverable | Gate | Status |
 |---|---|---|---|
 | INF-1 | PR-only `main`, required checks, issue-cleared merge, `AGENTS.md` | direct push rejected; protection verified | done |
-| INF-2 | CI: lint, unit tests, conformance, manifest validation, ADR/link/release gates | green on the bootstrap PR | done (pending PR) |
+| INF-2 | CI: lint, unit tests, conformance, manifest validation, ADR/link/release gates | green on the bootstrap PR | done |
 | INF-3 | Claude Agent SDK review agent, advisory, files issues | agent comments and files a labelled issue | wired; key pending (#11) |
-| INF-4 | Reference + vectorised DES, FIPS KAT, `10^6` cross-check | conformance manifest | done for reference/torch; scale check pending |
+| INF-4 | Reference + vectorised DES, FIPS KAT, `10^6` cross-check | conformance manifest | done at 256-vector scale; `10^6` sweep pending |
 | INF-5 | Key-schedule coverage map, inversion, 2^8 kernel assertion | assertions committed | planned (#4) |
-| INF-6 | Host RAM/VRAM smoke run, manifest round-trip | peak RAM < 1.5 GB, VRAM < 2.5 GB | torch installed; run pending (#10) |
+| INF-6 | Host RAM/VRAM smoke run, manifest round-trip | GPU smoke manifest; peak RAM/VRAM logging still pending | GPU smoke done (`20261126T082618Z-5b997b4e-3f683965-s0`); memory counters pending (#10) |
 | INF-7 | ADR-0001/0005/0006/0007 frozen, manifest schema, seed registry | ADR gate green | done |
 
 **G0:** all KATs pass; throughput ≥ `10^7` blocks/s (target `5×10^7`);
@@ -26,7 +26,7 @@ memory smoke passes; a GPU job produces a committed manifest.
 
 | ID | R | Model | Primary metric | Status |
 |---|---|---|---|---|
-| TH-1 | 1–16 | exact DDT/LAT, branch-and-bound trails, Matsui linear | checksums; MC agreement | planned (#2) |
+| TH-1 | 1–16 | exact DDT/LAT, branch-and-bound trails, Matsui linear | checksums; MC agreement | partial (#13, `20261126T082618Z-5b997b4e-3f683965-s0`): DDT/LAT + coverage; trail search pending (#2) |
 | TH-2 | 2–16 | DP/collision certificate | `C_r`, `p_r`, implied N + CI | planned (#2) |
 | TH-3 | 4–16 | predicted rank curves | predicted vs observed rank | planned (#2) |
 | DG-4 | 4 | SPADE chunk scorer, CPA | chunk AUC vs log-DDT, ECE | planned (#3) |

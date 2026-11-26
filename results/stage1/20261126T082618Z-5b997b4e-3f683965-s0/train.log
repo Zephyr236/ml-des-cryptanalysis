@@ -1,0 +1,14 @@
+{
+  "completions_per_round_key": 256.0,
+  "coverage_all_rounds": 56.0,
+  "coverage_round1": 48.0,
+  "coverage_rounds_1_2": 56.0,
+  "ddt_row_sums_ok": 1.0,
+  "differential_uniformity": 0.25,
+  "keys_checked": 16.0,
+  "lat_balance_ok": 1.0,
+  "max_ddt_entry_nonzero": 16.0,
+  "max_lat_abs_nontrivial": 40.0,
+  "max_linear_correlation": 0.625,
+  "recovery_pass": 1.0
+}

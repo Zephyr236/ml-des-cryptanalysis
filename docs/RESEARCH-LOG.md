@@ -1,3 +1,24 @@
+## 2026-11-26 — Theory core (DDT/LAT, schedule coverage, chunk algebra)
+
+**What.** The exact classical primitives are implemented and committed:
+DDT and LAT tables for all eight S-boxes, master-bit coverage of each
+round key, the 2^8 completion enumeration, and last-round partial
+decryption. Run `20261126T082618Z-5b997b4e-3f683965-s0`.
+
+**Findings.** Differential uniformity is `16/64 = 0.25` (max DDT entry
+excluding the trivial a=0 row); the largest non-trivial linear
+correlation is `40/64 = 0.625`; one round key observes 48 master bits and
+leaves 256 completions; two adjacent round keys already cover all 56
+master bits. These are the ceiling numbers the SPADE residual must beat.
+
+**Bug caught.** `SBOXES` is row-major, and the 6-bit S-box input is not a
+flat index. The theory tests caught a wrong-answer lookup that the FIPS
+vector alone did not expose; `sbox_output` is now the only lookup path
+and has regression coverage (ADR-0005).
+
+**Next.** Trail search and collision certificates (TH-1 remainder, #2),
+then the SPADE scorer (#3, #4).
+
 # Research log
 
 Reverse chronological. One entry per decision or result; link the issue
