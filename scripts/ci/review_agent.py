@@ -44,6 +44,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MAX_DIFF_CHARS = 90_000
 LABEL = "agent-review"
+ISSUE_MARKER = "<!-- des-review-agent -->"
 
 OPENCODE_BASE_URL = os.environ.get(
     "OPENCODE_BASE_URL", "https://opencode.ai/inference/go/openai/v1"
@@ -196,8 +197,16 @@ def find_existing_issue(repo: str, token: str, title: str) -> dict | None:
         for item in items:
             if "pull_request" in item:
                 continue
-            if item.get("title", "").strip().lower() == title.strip().lower():
-                return item
+            if item.get("title", "").strip().lower() != title.strip().lower():
+                continue
+            author = item.get("user", {}).get("login", "")
+            if ISSUE_MARKER not in (item.get("body") or "") and author not in {
+                "github-actions[bot]",
+                "github-actions",
+            }:
+                # Never comment on a human issue that happens to share a title.
+                continue
+            return item
         if len(items) < 100:
             return None
     return None
@@ -206,6 +215,7 @@ def find_existing_issue(repo: str, token: str, title: str) -> dict | None:
 def create_or_comment_issue(
     repo: str, token: str, title: str, body: str, labels: list[str]
 ) -> None:
+    body = f"{body}\n\n{ISSUE_MARKER}"
     existing = find_existing_issue(repo, token, title)
     if existing:
         github_json(
@@ -225,6 +235,13 @@ def create_or_comment_issue(
     except urllib.error.HTTPError as exc:
         if exc.code != 422:
             raise
+        detail = ""
+        try:
+            detail = exc.read().decode("utf-8", "ignore")
+        except Exception:  # noqa: BLE001 - the body may be unavailable
+            detail = ""
+        if "label" not in detail.lower():
+            raise
         # A missing label must not lose the finding.
         github_json(
             f"https://api.github.com/repos/{repo}/issues",
@@ -235,7 +252,7 @@ def create_or_comment_issue(
 
 
 def file_issue(repo: str, token: str, finding: dict, pr_number: int) -> None:
-    title = f"[review] {finding['title']}"
+    title = f"[review] {_text(finding.get('title', ''))}"
     body = (
         f"Filed by the automated review agent on PR #{pr_number}.\n\n"
         f"**Severity:** {finding['severity']}  \n"
@@ -250,8 +267,16 @@ def file_issue(repo: str, token: str, finding: dict, pr_number: int) -> None:
     create_or_comment_issue(repo, token, title, body, [LABEL, finding["area"]])
 
 
+def _text(value) -> str:
+    if isinstance(value, str):
+        return value
+    if value is None:
+        return ""
+    return str(value)
+
+
 def _bullets(items: list[str]) -> list[str]:
-    return [f"- {item}" for item in items] if items else ["- (none stated)"]
+    return [f"- {_text(item)}" for item in items] if items else ["- (none stated)"]
 
 
 def _as_dict(value) -> dict:
@@ -281,19 +306,19 @@ def research_report_body(
         "",
         "## Summary",
         "",
-        review.get("summary", "").strip(),
+        _text(review.get("summary")).strip(),
         "",
         "## Hypothesis",
         "",
-        analysis.get("hypothesis", "").strip() or "(not stated)",
+        _text(analysis.get("hypothesis")).strip() or "(not stated)",
         "",
         "## Design",
         "",
-        analysis.get("design", "").strip() or "(not stated)",
+        _text(analysis.get("design")).strip() or "(not stated)",
         "",
         "## Results",
         "",
-        analysis.get("results", "").strip() or "(not stated)",
+        _text(analysis.get("results")).strip() or "(not stated)",
         "",
         "## Missing analyses",
         "",
@@ -349,12 +374,12 @@ def file_research_report(
 def file_recommendation(
     repo: str, token: str, recommendation: dict, pr_number: int, pr_title: str
 ) -> None:
-    title = f"[research] {recommendation['title']}"
+    title = f"[research] {_text(recommendation.get('title', ''))}"
     body = (
         f"Filed by the review agent from PR #{pr_number} ({pr_title}).\n\n"
         f"**Priority:** {recommendation.get('priority', '?')}  \n"
         f"**Kind:** {recommendation.get('kind', '?')}\n\n"
-        f"**Recommendation**\n\n{recommendation.get('detail', '')}\n\n"
+        f"**Recommendation**\n\n{_text(recommendation.get('detail'))}\n\n"
         "This issue is advisory. It does not block a merge; closing it is a "
         "research decision, not a CI state."
     )
@@ -362,11 +387,10 @@ def file_recommendation(
 
 
 def is_research_diff(diff: str) -> bool:
-    changed = set(
-        re.findall(r"^(?:\+\+\+ b/|--- a/)(\S+)$", diff, flags=re.M)
+    return any(
+        path.startswith(("src/", "configs/", "results/"))
+        for path in _diff_paths(diff)
     )
-    changed.discard("/dev/null")
-    return any(path.startswith(("src/", "configs/", "results/")) for path in changed)
 
 
 def parse_json(text: str) -> dict:
@@ -384,7 +408,7 @@ def format_comment(review: dict, pr_number: int, backend: str) -> str:
     lines = [
         "## Automated review (advisory)",
         "",
-        review.get("summary", "").strip(),
+        _text(review.get("summary")).strip(),
         "",
         f"**Verdict:** `{review.get('verdict', 'unknown')}`",
         "",
@@ -591,8 +615,19 @@ def select_backend(opencode_key: str, anthropic_key: str, oauth_token: str) -> s
     return "none"
 
 
+def _diff_paths(diff: str) -> set[str]:
+    paths: set[str] = set()
+    for match in re.finditer(r"^diff --git a/(\S+) b/(\S+)$", diff, flags=re.M):
+        paths.update(match.groups())
+    return paths
+
+
 def _changed_manifests(diff: str) -> set[str]:
-    return set(re.findall(r"^\+\+\+ b/(results/.*/manifest\.json)\s*$", diff, flags=re.M))
+    return {
+        path
+        for path in _diff_paths(diff)
+        if path.startswith("results/") and path.endswith("/manifest.json")
+    }
 
 
 def build_prompt(diff: str, pr: dict | None = None) -> str:
@@ -745,7 +780,7 @@ def main() -> int:
     post_comment(repo, number, token, format_comment(review, number, backend))
 
     analysis = _as_dict(review.get("research_analysis"))
-    if analysis and is_research_diff(diff):
+    if analysis and analysis.get("research_content", True) is not False and is_research_diff(diff):
         try:
             file_research_report(
                 repo,

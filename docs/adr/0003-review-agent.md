@@ -78,7 +78,7 @@ as issues.
    returns a `research_analysis` object (hypothesis, design, results,
    missing analyses, next experiments, confidence) and a prioritised
    `recommendations` list. For PRs touching `src/`, `configs/` or
-   `results/`, it files a `[research] PR #N` issue containing the full
+   `results/`, it files a `[research] PR #N analysis` issue containing the full
    report, labelled `research-review` and `analysis`. High/medium
    recommendations become separate `[research]` issues labelled
    `recommendation`. Titles are deduplicated by exact match against open

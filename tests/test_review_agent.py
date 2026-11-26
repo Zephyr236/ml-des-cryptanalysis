@@ -1,3 +1,4 @@
+import io
 import json
 import sys
 import urllib.error
@@ -133,7 +134,7 @@ def test_build_prompt_includes_metrics_and_pr_metadata(monkeypatch, tmp_path):
     )
     monkeypatch.setattr(review_agent, "REPO_ROOT", tmp_path)
     prompt = review_agent.build_prompt(
-        "diff --git a/x b/x\n+++ b/results/stage1/run-1/manifest.json\n",
+        "diff --git a/results/stage1/run-1/manifest.json b/results/stage1/run-1/manifest.json\n",
         {"title": "T", "head_sha": "abc123", "base_sha": "def456", "body": "body"},
     )
     assert "metrics_final" in prompt
@@ -374,13 +375,15 @@ def test_research_report_body_includes_sections():
 
 
 def test_is_research_diff():
-    assert review_agent.is_research_diff("+++ b/src/des_ml/des.py\n")
-    assert review_agent.is_research_diff("+++ b/configs/eval/x.yaml\n")
-    assert review_agent.is_research_diff("+++ b/results/stage1/run/manifest.json\n")
-    assert review_agent.is_research_diff("--- a/src/des_ml/des.py\n+++ /dev/null\n")
-    assert review_agent.is_research_diff("--- a/configs/x.yaml\n+++ b/configs/y.yaml\n")
-    assert not review_agent.is_research_diff("+++ b/docs/REVIEW-AGENT.md\n")
-    assert not review_agent.is_research_diff("+++ b/.github/workflows/ci.yml\n")
+    def diff(path):
+        return f"diff --git a/{path} b/{path}\n--- a/{path}\n+++ b/{path}\n"
+
+    assert review_agent.is_research_diff(diff("src/des_ml/des.py"))
+    assert review_agent.is_research_diff(diff("configs/eval/x.yaml"))
+    assert review_agent.is_research_diff(diff("results/stage1/run/manifest.json"))
+    assert review_agent.is_research_diff(diff("src/des_ml/des.py").replace("+++ b/src/des_ml/des.py", "+++ /dev/null"))
+    assert not review_agent.is_research_diff(diff("docs/REVIEW-AGENT.md"))
+    assert not review_agent.is_research_diff(diff(".github/workflows/ci.yml"))
 
 
 def test_create_or_comment_issue_retries_without_labels(monkeypatch):
@@ -390,7 +393,9 @@ def test_create_or_comment_issue_retries_without_labels(monkeypatch):
     def fake_github_json(url, token, method="GET", payload=None):
         calls.append((url, method, payload))
         if len(calls) == 1:
-            raise urllib.error.HTTPError(url, 422, "Unprocessable", {}, None)
+            raise urllib.error.HTTPError(
+                url, 422, "Unprocessable", {}, io.BytesIO(b'{"errors":[{"field":"labels"}]}')
+            )
         return {}
 
     monkeypatch.setattr(review_agent, "github_json", fake_github_json)
@@ -420,7 +425,9 @@ def test_main_files_research_report_for_research_diff(monkeypatch, tmp_path):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
     _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
-    (tmp_path / "pr.diff").write_text("+++ b/src/des_ml/des.py\n", encoding="utf-8")
+    (tmp_path / "pr.diff").write_text(
+        "diff --git a/src/des_ml/des.py b/src/des_ml/des.py\n", encoding="utf-8"
+    )
     monkeypatch.setattr(sys, "argv", ["review_agent.py"])
     monkeypatch.setattr(
         review_agent, "call_opencode", lambda *a, **k: json.dumps(_research_review())
@@ -449,7 +456,14 @@ def test_find_existing_issue_is_unlabeled_and_paginates(monkeypatch):
     filler = [{"number": n, "title": f"other-{n}"} for n in range(100)]
     pages = {
         1: filler,
-        2: [{"number": 200, "title": "Target Title"}],
+        2: [
+            {
+                "number": 200,
+                "title": "Target Title",
+                "user": {"login": "github-actions[bot]"},
+                "body": "",
+            }
+        ],
     }
 
     def fake_github_json(url, token, method="GET", payload=None):
@@ -478,3 +492,92 @@ def test_format_comment_tolerates_malformed_shapes():
     assert "No code findings." in text
     assert "T" in text
     assert "Recommendation details" in text
+
+
+def test_create_or_comment_issue_raises_non_label_422(monkeypatch):
+    monkeypatch.setattr(review_agent, "find_existing_issue", lambda *a, **k: None)
+    calls = []
+
+    def fake_github_json(url, token, method="GET", payload=None):
+        calls.append(payload)
+        raise urllib.error.HTTPError(
+            url, 422, "Unprocessable", {}, io.BytesIO(b'{"message":"Validation Failed"}')
+        )
+
+    monkeypatch.setattr(review_agent, "github_json", fake_github_json)
+    with pytest.raises(urllib.error.HTTPError):
+        review_agent.create_or_comment_issue("o/r", "t", "title", "body", ["label"])
+    assert len(calls) == 1
+
+
+def test_find_existing_issue_ignores_human_issue(monkeypatch):
+    human = {
+        "number": 1,
+        "title": "Target Title",
+        "user": {"login": "alice"},
+        "body": "human issue",
+    }
+
+    monkeypatch.setattr(
+        review_agent, "github_json", lambda url, token, method="GET", payload=None: [human]
+    )
+    assert review_agent.find_existing_issue("o/r", "t", "target title") is None
+
+
+def test_find_existing_issue_matches_bot_issue(monkeypatch):
+    bot = {
+        "number": 2,
+        "title": "Target Title",
+        "user": {"login": "github-actions[bot]"},
+        "body": "",
+    }
+
+    monkeypatch.setattr(
+        review_agent, "github_json", lambda url, token, method="GET", payload=None: [bot]
+    )
+    assert review_agent.find_existing_issue("o/r", "t", "target title")["number"] == 2
+
+
+def test_main_skips_report_when_research_content_false(monkeypatch, tmp_path):
+    monkeypatch.setenv("OPENCODE_ZEN_API_KEY", "test-key")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
+    _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
+    (tmp_path / "pr.diff").write_text(
+        "diff --git a/src/des_ml/des.py b/src/des_ml/des.py\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(sys, "argv", ["review_agent.py"])
+    review = _research_review()
+    review["research_analysis"]["research_content"] = False
+    monkeypatch.setattr(review_agent, "call_opencode", lambda *a, **k: json.dumps(review))
+    monkeypatch.setattr(review_agent, "post_comment", lambda *a, **k: None)
+    reports = []
+    monkeypatch.setattr(
+        review_agent,
+        "file_research_report",
+        lambda *a, **k: reports.append(a),
+    )
+    monkeypatch.setattr(review_agent, "file_recommendation", lambda *a, **k: None)
+    assert review_agent.main() == 0
+    assert reports == []
+
+
+def test_research_report_body_tolerates_malformed_fields():
+    review = {
+        "summary": ["not", "a", "string"],
+        "verdict": "sound",
+        "research_analysis": {
+            "research_content": True,
+            "hypothesis": ["list"],
+            "design": None,
+            "results": 3,
+            "missing_analyses": "not a list",
+            "next_experiments": [1, 2],
+            "confidence": "low",
+        },
+        "findings": "bad",
+        "recommendations": [{"priority": "low", "kind": "code", "title": ["t"], "detail": None}],
+    }
+    body = review_agent.research_report_body(review, 1, "title", "sha", "backend")
+    assert "Hypothesis" in body
+    assert "Recommendation" in body
