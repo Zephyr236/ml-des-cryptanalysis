@@ -147,6 +147,43 @@ that follows contains only results and docs.
 **G2:** KR-4 passes; VA-1 passes; CT-7 at chance; every success verified
 by re-encryption.
 
+## Stage 2 — AI chunk scorer pilot and 6-round attack
+
+### 2-round chunk scorer (SPADE-style)
+
+Run `20261126T150811Z-fa7d0232-c7d52488-s0`: 2-round CPA, 32 pairs/key,
+16 keys per batch, 3000 steps, per-S-box DDT-initialised residual.
+
+| Metric | Neural scorer | Exact DDT counter |
+|---|---|---|
+| chunk accuracy | 0.3906 | 0.0000 |
+| top-5 | 0.7656 | 0.0371 |
+| mean rank | 9.19 | 33.62 |
+
+Per-box diagnostics on held-out keys show boxes 0, 1, 2, 4, 6 and 7
+mostly at rank 1–2, while boxes 3 and 5 remain weak (ranks 12–64). A full
+2-round key recovery with this checkpoint is therefore not claimed; the
+result establishes that the learning pipeline is real at 2 rounds.
+
+### 6-round differential attack
+
+- Trail: 5-round full-active characteristic `ΔP=0x0000001010000000`,
+  `p=2^-25.268`, last-round input differences
+  `[8,1,19,48,8,4,2,32]`.
+- Baseline: 100M pairs, no filter — run
+  `20261126T154314Z-691eb843-fefdb8d2-s0`; true-chunk ranks
+  `[3,64,16,14.5,34,16,42,44]`, mean 29.19. Partial box-level signal,
+  no key recovery.
+- Filtered attack: run `20261126T154935Z-80d903b0-583165ba-s0`;
+  323M chosen plaintext pairs, right-pair filter on the key-independent
+  last-round vector, exact DDT rank, top-k candidates, key-schedule
+  inversion and re-encryption verification. Result: **pending commit**
+  (this section is updated with the filtered count, true-chunk ranks and
+  the recovered key).
+- Neural 6-round chunk-scorer and PairCNN distinguisher training did not
+  move above chance in early evaluations; this negative scaling result
+  is recorded in ADR-0010.
+
 ## Stage 3 — KPA vs CPA
 
 | ID | R | Model | Primary metric | Status |
