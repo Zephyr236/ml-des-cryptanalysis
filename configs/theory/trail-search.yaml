@@ -3,17 +3,21 @@
 # The search is a lower bound; beam/branch/combos are recorded in the run.
 run_name: th-1-trail-search
 max_rounds: 5
-beam: 2000
+beam: 8000
 branch: 4
 combos: 12
 seed: 0
+
+sensitivity:
+  beams: [500, 2000, 8000]
 device: auto
 
 validation:
   # Validate the best active trail per round against the real cipher.
-  rounds: [1, 2, 3]
+  rounds: [1, 2, 3, 4]
   samples:
     1: 100000
     2: 500000
     3: 1000000
+    4: 20000000
   batch: 8192

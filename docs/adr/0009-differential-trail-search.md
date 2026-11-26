@@ -45,6 +45,22 @@ differences, and there are eight S-boxes per round.
 7. **Use.** Only validated active trails are used to choose CPA deltas
    and right-pair filters. A trail's last-round S-box input differences
    are the filter target for the chunk-ranking attack.
+8. **Power before proposals.** Every trail reports `N*p` at the current
+   pair budget and the pairs needed for 1, 10 and 100 right pairs. A
+   trail is only proposed for a downstream attack when that requirement
+   is feasible at the planned key count; an unvalidated or underpowered
+   trail is recorded, not promoted.
+9. **Two-sided interval, one-sided rejection.** Validation reports a
+   Wilson interval for the empirical frequency. The pass rule is
+   one-sided (`empirical >= p - 3*sigma`) because other trails can
+   collide into the same state path and only increase the observed rate;
+   the interval is still reported so an unexpectedly high rate is
+   visible.
+10. **Beam sensitivity.** The run records the best active log2
+    probability for several beam widths. A lower bound that moves with
+    the beam width is reported as such; it is not a certificate.
+11. **Indexing.** S-box inputs/outputs are reported as 0-based array
+    indices (`S1=0, ..., S8=7`). Every trail artefact states this.
 
 ## Consequences
 
@@ -57,6 +73,10 @@ differences, and there are eight S-boxes per round.
   distinguisher; it is reported for completeness and separated from
   `best_active`.
 - An unvalidated trail cannot be used in a downstream attack.
+- A trail whose required pair budget is infeasible is reported as a
+  boundary/negative result, not as a candidate.
+- Beam sensitivity is evidence about the search, not a proof of
+  optimality; the classical ceiling remains a separate experiment.
 
 ## Alternatives considered
 

@@ -15,6 +15,7 @@ import argparse
 import json
 import math
 import sys
+import time
 from pathlib import Path
 
 import torch
@@ -124,23 +125,26 @@ def main() -> int:
     )
 
     starts = single_bit_starts()
+    max_rounds = int(config["max_rounds"])
+    beam = int(config.get("beam", 2000))
+    branch = int(config.get("branch", 4))
+    combos = int(config.get("combos", 12))
+    search_start = time.perf_counter()
     best, best_active = search(
-        starts,
-        int(config["max_rounds"]),
-        beam=int(config.get("beam", 2000)),
-        branch=int(config.get("branch", 4)),
-        combos=int(config.get("combos", 12)),
+        starts, max_rounds, beam=beam, branch=branch, combos=combos
     )
+    search_seconds = time.perf_counter() - search_start
 
     payload = {
         "parameters": {
             "starts": len(starts),
-            "max_rounds": int(config["max_rounds"]),
-            "beam": int(config.get("beam", 2000)),
-            "branch": int(config.get("branch", 4)),
-            "combos": int(config.get("combos", 12)),
+            "max_rounds": max_rounds,
+            "beam": beam,
+            "branch": branch,
+            "combos": combos,
             "seed": seed,
         },
+        "sbox_indexing": "0-based array index: S1=0, S2=1, ..., S8=7",
         "best": {str(r): trail_to_dict(reconstruct(node)) for r, node in best.items()},
         "best_active": {
             str(r): trail_to_dict(reconstruct(node)) for r, node in best_active.items()
@@ -150,10 +154,12 @@ def main() -> int:
 
     metrics: dict[str, float] = {
         "starts": float(len(starts)),
-        "max_rounds": float(config["max_rounds"]),
-        "beam": float(config.get("beam", 2000)),
-        "branch": float(config.get("branch", 4)),
-        "combos": float(config.get("combos", 12)),
+        "max_rounds": float(max_rounds),
+        "beam": float(beam),
+        "branch": float(branch),
+        "combos": float(combos),
+        "search_seconds": search_seconds,
+        "device_is_cuda": float(device.type == "cuda"),
     }
     for r, node in best.items():
         trail = reconstruct(node)
@@ -165,10 +171,42 @@ def main() -> int:
         metrics[f"best_active_probability_r{r}"] = trail.probability
     metrics["best_active_rounds"] = float(len(best_active))
 
+    # Power analysis: a trail is only useful downstream when N*p gives
+    # enough right pairs.  Record both the expected count at the current
+    # 64-pairs/key budget and the pairs needed for 1/10/100 right pairs.
+    for r, node in best_active.items():
+        probability = reconstruct(node).probability
+        metrics[f"power_r{r}_expected_at_64"] = 64.0 * probability
+        for target in (1, 10, 100):
+            metrics[f"power_r{r}_pairs_for_{target}"] = (
+                math.ceil(target / probability) if probability > 0 else float("inf")
+            )
+
+    sensitivity: dict[str, dict[str, float]] = {}
+    sensitivity_beams = [int(value) for value in (config.get("sensitivity") or {}).get("beams", [])]
+    if sensitivity_beams:
+        sensitivity_start = time.perf_counter()
+        for sensitivity_beam in sensitivity_beams:
+            _, active = search(
+                starts, max_rounds, beam=sensitivity_beam, branch=branch, combos=combos
+            )
+            sensitivity[str(sensitivity_beam)] = {
+                str(r): reconstruct(node).log2_probability for r, node in active.items()
+            }
+            for r, node in active.items():
+                metrics[f"sensitivity_beam{sensitivity_beam}_log2p_r{r}"] = (
+                    reconstruct(node).log2_probability
+                )
+        metrics["sensitivity_seconds"] = time.perf_counter() - sensitivity_start
+        (writer.path / "sensitivity.json").write_text(
+            json.dumps(sensitivity, indent=2, sort_keys=True), encoding="utf-8"
+        )
+
     validation = config.get("validation") or {}
     samples_cfg = validation.get("samples") or {}
     batch = int(validation.get("batch", 8192))
     all_passed = True
+    validation_start = time.perf_counter()
     for round_key in validation.get("rounds", []):
         round_index = int(round_key)
         node = best_active.get(round_index)
@@ -185,14 +223,25 @@ def main() -> int:
         sigma = math.sqrt(max(predicted * (1.0 - predicted), 1e-12) / n)
         passed = empirical >= predicted - 3.0 * sigma
         all_passed &= passed
+        z = 1.96
+        denominator = 1.0 + z * z / n
+        centre = (empirical + z * z / (2.0 * n)) / denominator
+        half = (
+            z
+            * math.sqrt(empirical * (1.0 - empirical) / n + z * z / (4.0 * n * n))
+            / denominator
+        )
         metrics[f"validation_r{round_index}_samples"] = float(n)
         metrics[f"validation_r{round_index}_predicted"] = predicted
         metrics[f"validation_r{round_index}_empirical"] = empirical
+        metrics[f"validation_r{round_index}_ci_low"] = max(0.0, centre - half)
+        metrics[f"validation_r{round_index}_ci_high"] = min(1.0, centre + half)
         metrics[f"validation_r{round_index}_pass"] = float(passed)
         writer.log(
             f"validate r={round_index} predicted={predicted:.6g} "
             f"empirical={empirical:.6g} n={n} pass={passed}"
         )
+    metrics["validation_seconds"] = time.perf_counter() - validation_start
     metrics["validation_all_pass"] = float(all_passed)
 
     writer.record(0, metrics)
