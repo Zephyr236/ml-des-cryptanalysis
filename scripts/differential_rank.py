@@ -10,6 +10,7 @@ recovered master key is verified by real re-encryption.
 from __future__ import annotations
 
 import argparse
+import itertools
 import json
 import sys
 import time
@@ -52,6 +53,8 @@ def main() -> int:
         default=None,
         help="comma-separated eight last-round S-box input differences; keep matching pairs",
     )
+    parser.add_argument("--top-k", type=int, default=1, help="candidates per S-box for key recovery")
+    parser.add_argument("--max-combos", type=float, default=2_000_000)
     parser.add_argument("--no-latest", action="store_true")
     args = parser.parse_args()
 
@@ -141,24 +144,37 @@ def main() -> int:
         "ranks": [float(value) for value in ranks.tolist()],
     }
     recovered = False
-    if bool((ranks <= 1).all()):
-        round_key = sum(int(truth[j]) << (42 - 6 * j) for j in range(8))
-        candidates = recover_master_keys(round_key, args.rounds)
+    topk = torch.topk(scores, args.top_k, dim=1).indices
+    candidate_lists = [topk[j].tolist() for j in range(8)]
+    combos = 1
+    for values in candidate_lists:
+        combos *= len(values)
+    if combos <= args.max_combos:
         verifier_plain = rand64(4, device=device, generator=generator)
         verifier_cipher = des_encrypt_torch(
             verifier_plain, key_tensor.expand(4), args.rounds
         )
         found = None
-        for candidate in candidates:
-            signed_candidate = signed(candidate)
-            candidate_tensor = torch.tensor(
-                [signed_candidate], dtype=torch.long, device=device
-            ).expand(4)
-            if bool((des_encrypt_torch(verifier_plain, candidate_tensor, args.rounds) == verifier_cipher).all()):
-                found = candidate
+        for combo in itertools.product(*candidate_lists):
+            round_key = sum(int(chunk) << (42 - 6 * j) for j, chunk in enumerate(combo))
+            for candidate in recover_master_keys(round_key, args.rounds):
+                signed_candidate = signed(candidate)
+                candidate_tensor = torch.tensor(
+                    [signed_candidate], dtype=torch.long, device=device
+                ).expand(4)
+                if bool(
+                    (
+                        des_encrypt_torch(verifier_plain, candidate_tensor, args.rounds)
+                        == verifier_cipher
+                    ).all()
+                ):
+                    found = candidate
+                    break
+            if found is not None:
                 break
         recovered = found is not None
         details["master_key"] = f"0x{found:016X}" if found is not None else ""
+        details["combos_tried"] = combos
     metrics["recovered"] = float(recovered)
 
     (writer.path / "scores.json").write_text(
