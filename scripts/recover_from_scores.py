@@ -9,6 +9,7 @@ configurations without regenerating data.
 from __future__ import annotations
 
 import argparse
+import faulthandler
 import itertools
 import json
 import sys
@@ -22,6 +23,8 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 from des_ml.des_torch import des_encrypt_torch, rand64  # noqa: E402
 from des_ml.key_schedule import recover_master_keys  # noqa: E402
 from des_ml.manifest import RunWriter, update_latest  # noqa: E402
+
+faulthandler.enable(open("fault.txt", "w"))
 
 
 def signed(value: int) -> int:
