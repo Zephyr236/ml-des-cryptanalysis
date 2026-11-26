@@ -31,6 +31,7 @@ from .des import (
 __all__ = [
     "des_encrypt_torch",
     "des_decrypt_torch",
+    "des_encrypt_states_torch",
     "key_schedule_torch",
     "feistel_torch",
     "permute_torch",
@@ -118,6 +119,22 @@ def des_decrypt_torch(block: torch.Tensor, key, rounds: int = 16) -> torch.Tenso
     block = block.to(dtype=torch.long)
     key = _as_tensor(key, block)
     return _crypt(block, list(reversed(key_schedule_torch(key, rounds))))
+
+
+def des_encrypt_states_torch(
+    block: torch.Tensor, key, rounds: int = 16
+) -> list[tuple[torch.Tensor, torch.Tensor]]:
+    """Batched ``[(L0,R0), ..., (L_r,R_r)]`` for the Monte Carlo check."""
+    block = block.to(dtype=torch.long)
+    key = _as_tensor(key, block)
+    state = permute_torch(block, IP, 64)
+    left = (state >> 32) & 0xFFFFFFFF
+    right = state & 0xFFFFFFFF
+    states = [(left, right)]
+    for subkey in key_schedule_torch(key, rounds):
+        left, right = right, left ^ feistel_torch(right, subkey)
+        states.append((left, right))
+    return states
 
 
 def rand64(

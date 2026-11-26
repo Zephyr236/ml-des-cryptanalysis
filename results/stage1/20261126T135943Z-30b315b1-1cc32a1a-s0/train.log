@@ -1,0 +1,4 @@
+validate r=1 predicted=0.25 empirical=0.25028 n=100000 pass=True
+validate r=2 predicted=0.25 empirical=0.249068 n=500000 pass=True
+validate r=3 predicted=0.00732422 empirical=0.007316 n=1000000 pass=True
+validate r=4 predicted=4.88944e-06 empirical=5.1e-06 n=20000000 pass=True
