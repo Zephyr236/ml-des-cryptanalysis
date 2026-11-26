@@ -29,10 +29,14 @@ working 6-round known/chosen-plaintext attack with an AI component; the
 3. **Six-round differential attack.** Use the full-active 5-round trail
    (`DeltaP=0x0000001010000000`, `p=2^-25.268`, last-round input
    differences `[8,1,19,48,8,4,2,32]`).  Filter pairs by that
-   key-independent vector, rank the last-round chunks by exact log-DDT
-   over the filtered pairs, take top-k per S-box, invert the key
-   schedule (256 completions per 48-bit round key), and verify every
-   master key by real re-encryption.
+   key-independent vector, then test each candidate chunk key by the
+   **characteristic match**: partially decrypt the last round and check
+   the trail's predicted `L5` difference.  Take top-k per S-box, invert
+   the key schedule (256 completions per 48-bit round key), and verify
+   every master key by real re-encryption.  The plain log-DDT rank is
+   kept as a negative baseline: over a handful of filtered pairs it
+   scores wrong high-probability output differences above true right
+   pairs, and a partial filter with ~5k non-right pairs is diluted.
 4. **AI scaling is reported honestly.** Six-round chunk-scorer and
    PairCNN distinguisher training were started and did not move above
    chance in the early evaluations.  The six-round key recovery
@@ -58,7 +62,9 @@ working 6-round known/chosen-plaintext attack with an AI component; the
 
 - **Five-round characteristic only.** At `2^-25`, unfiltered DDT rank
   over 100M pairs is near chance (mean rank 29.2 of 64, partial box
-  signal).  The right-pair filter is necessary.
+  signal).  The full-filter run over 323M pairs kept only four pairs;
+  the plain DDT rank stayed at chance, which motivated the
+  characteristic-match test.
 - **End-to-end 56-bit key regression.** No sample-efficient path.
 - **A neural distinguisher as the 6-round claim.** Early training did
   not learn; a distinguishing claim would be weaker than the key
