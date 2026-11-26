@@ -187,6 +187,15 @@ results/<stage>/<run_id>/
 
 **评审 agent 的定位**：它是"有发言权、没有否决权"的审稿人。它的意见必须被看见，但研究判断由人做。任何试图让评审 agent 成为 required check 的改动都需要新 ADR。
 
+**后端选择**：由 secret 决定，二者共享同一套 rubric、JSON 输出和 issue 策略。
+- `OPENCODE_ZEN_API_KEY` 存在 → **OpenCode Zen Go**（OpenAI 兼容，默认
+  `https://opencode.ai/inference/go/openai/v1`、`deepseek-v4.1-flash`，
+  每次 PR 用稳定的 `x-opencode-session`）。该后端没有仓库工具，diff（截断
+  90k 字符）和 manifest 摘要直接放进 prompt。
+- 否则 `ANTHROPIC_API_KEY` / `CLAUDE_CODE_OAUTH_TOKEN` 存在 → **Claude Agent SDK**，
+  只读工具 `Read/Grep/Glob`。
+- 两者都没有 → 在 PR 里贴 skip 通知并成功退出，绝不失败 CI。
+
 ---
 
 ## 7. 评审 Agent 的审查清单

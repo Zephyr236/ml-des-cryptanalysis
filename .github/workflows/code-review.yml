@@ -1,8 +1,12 @@
 name: code-review
 
+# pull_request_target keeps the model secret away from PR-controlled code:
+# the workflow file and the review script come from the base branch, and the
+# PR head is only fetched to build a diff. No file from the PR is executed.
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
 
 permissions:
   contents: read
@@ -23,7 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.event.pull_request.base.sha }}
           fetch-depth: 0
 
       - uses: actions/setup-python@v5
@@ -39,14 +43,21 @@ jobs:
           npm install -g @anthropic-ai/claude-code
           pip install claude-agent-sdk
 
-      - name: Build pull-request diff
+      - name: Build pull-request diff (read-only)
         run: |
           git fetch origin "+refs/heads/*:refs/remotes/origin/*" --prune
-          git diff "origin/${{ github.event.pull_request.base.ref }}...${{ github.event.pull_request.head.sha }}" > /tmp/pr.diff
+          git fetch origin "pull/${{ github.event.pull_request.number }}/head:pr-head"
+          git diff "origin/${{ github.event.pull_request.base.ref }}...pr-head" > /tmp/pr.diff
           wc -c /tmp/pr.diff
 
       - name: Review
         env:
+          # OpenCode Zen Go transport (preferred when configured).
+          OPENCODE_ZEN_API_KEY: ${{ secrets.OPENCODE_ZEN_API_KEY }}
+          OPENCODE_BASE_URL: ${{ vars.OPENCODE_BASE_URL || 'https://opencode.ai/inference/go/openai/v1' }}
+          OPENCODE_MODEL: ${{ vars.OPENCODE_MODEL || 'deepseek-v4.1-flash' }}
+          OPENCODE_MAX_TOKENS: ${{ vars.OPENCODE_MAX_TOKENS || '64000' }}
+          # Claude Agent SDK transport (fallback).
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
