@@ -13,11 +13,24 @@ import torch
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from des_ml.des_torch import key_schedule_torch  # noqa: E402
+from des_ml.des_torch import des_encrypt_torch, key_schedule_torch, rand64  # noqa: E402
 from des_ml.eval.ddt_rank import log_ddt_tensor, sbox_lut  # noqa: E402
 from des_ml.models.chunk_scorer import ChunkScorer  # noqa: E402
 from des_ml.models.chunk_scorer_legacy import LegacyChunkScorer  # noqa: E402
-from des_ml.train.train_chunk_scorer import make_pairs  # noqa: E402
+
+
+def make_pairs(config, key, pairs, device, generator):
+    rounds = int(config["rounds"])
+    mode = str(config["mode"])
+    delta = config.get("delta")
+    if isinstance(delta, str):
+        delta = int(delta, 0)
+    keys = key.repeat(pairs)
+    plaintext1 = rand64(pairs, device=device, generator=generator)
+    plaintext2 = plaintext1 ^ int(delta) if mode == "cpa" else rand64(pairs, device=device, generator=generator)
+    ciphertext1 = des_encrypt_torch(plaintext1, keys, rounds)
+    ciphertext2 = des_encrypt_torch(plaintext2, keys, rounds)
+    return plaintext1.unsqueeze(0), plaintext2.unsqueeze(0), ciphertext1.unsqueeze(0), ciphertext2.unsqueeze(0)
 
 
 def signed(value: int) -> int:
