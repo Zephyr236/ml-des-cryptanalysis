@@ -80,6 +80,8 @@ def main() -> int:
             "rounds": args.rounds,
             "pairs": args.pairs,
             "batch": args.batch,
+            "filter_vector": args.filter_vector,
+            "top_k": args.top_k,
         },
         config_path="scripts/differential_rank.py",
         seed=args.seed,
