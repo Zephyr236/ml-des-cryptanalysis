@@ -20,9 +20,9 @@ import torch
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from des_ml.des import PC1, PC2, SHIFTS  # noqa: E402
+
 from des_ml.des_torch import des_encrypt_torch, rand64  # noqa: E402
-from des_ml.key_schedule import round_key_master_positions  # noqa: E402
+from des_ml.key_schedule import recover_master_keys  # noqa: E402
 from des_ml.manifest import RunWriter, update_latest  # noqa: E402
 
 
@@ -57,30 +57,16 @@ def main() -> int:
         for combo in combos
     ]
 
-    positions = round_key_master_positions(args.rounds)
-    unknown_cd = [p for p in range(1, 57) if p not in set(PC2)]
-    shift = sum(SHIFTS[: args.rounds]) % 28
-
-    def inverse_cd(position: int) -> int:
-        half = 0 if position <= 28 else 28
-        local = position - half
-        return half + ((local - 1 - shift) % 28) + 1
-
-    unknown_master = [PC1[inverse_cd(p) - 1] for p in unknown_cd]
+    contributions = [recover_master_keys(1 << (47 - i), args.rounds)[0] for i in range(48)]
+    zero_completions = recover_master_keys(0, args.rounds)
+    masks = [value ^ zero_completions[0] for value in zero_completions]
     base = []
     for k2 in k2s:
         value = 0
-        for bit_index, position in enumerate(positions):
-            if (k2 >> (47 - bit_index)) & 1:
-                value |= 1 << (64 - position)
+        for i in range(48):
+            if (k2 >> (47 - i)) & 1:
+                value ^= contributions[i]
         base.append(value)
-    masks = []
-    for assignment in range(256):
-        value = 0
-        for index, position in enumerate(unknown_master):
-            if (assignment >> index) & 1:
-                value |= 1 << (64 - position)
-        masks.append(value)
 
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
     key = int(args.key, 0) & ((1 << 64) - 1)
