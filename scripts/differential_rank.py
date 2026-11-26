@@ -24,7 +24,11 @@ from des_ml.des_torch import des_encrypt_torch, key_schedule_torch, rand64  # no
 from des_ml.eval.ddt_rank import log_ddt_tensor, sbox_lut  # noqa: E402
 from des_ml.key_schedule import recover_master_keys  # noqa: E402
 from des_ml.manifest import RunWriter, update_latest  # noqa: E402
-from des_ml.models.chunk_scorer import candidate_log_ddt  # noqa: E402
+from des_ml.models.chunk_scorer import (  # noqa: E402
+    candidate_log_ddt,
+    last_round_context,
+    sbox_inputs,
+)
 
 MASK64 = (1 << 64) - 1
 
@@ -43,6 +47,11 @@ def main() -> int:
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--out", default="results/stage2")
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--filter-vector",
+        default=None,
+        help="comma-separated eight last-round S-box input differences; keep matching pairs",
+    )
     parser.add_argument("--no-latest", action="store_true")
     args = parser.parse_args()
 
@@ -76,7 +85,14 @@ def main() -> int:
         tags={"stage": "stage2", "kind": "differential-rank", "rounds": args.rounds},
     )
 
+    filter_vector = None
+    if args.filter_vector:
+        values = [int(value.strip()) for value in args.filter_vector.split(",")]
+        if len(values) != 8:
+            raise ValueError("--filter-vector must have eight values")
+        filter_vector = torch.tensor(values, dtype=torch.long, device=device)
     scores = torch.zeros((8, 64), dtype=torch.float64, device=device)
+    filtered_pairs = 0
     start = time.perf_counter()
     done = 0
     while done < args.pairs:
@@ -87,7 +103,20 @@ def main() -> int:
         ciphertext1 = des_encrypt_torch(plaintext1, keys, args.rounds).reshape(1, n)
         ciphertext2 = des_encrypt_torch(plaintext2, keys, args.rounds).reshape(1, n)
         with torch.no_grad():
-            scores += candidate_log_ddt(ciphertext1, ciphertext2, lut, log_ddt)[0].double()
+            if filter_vector is not None:
+                _, left1, _, left2 = last_round_context(ciphertext1, ciphertext2)
+                inputs = sbox_inputs(left1) ^ sbox_inputs(left2)
+                mask = (inputs == filter_vector).all(dim=-1)[0]
+                kept = int(mask.sum().item())
+                filtered_pairs += kept
+                if kept:
+                    ciphertext1 = ciphertext1[:, mask]
+                    ciphertext2 = ciphertext2[:, mask]
+                    scores += candidate_log_ddt(
+                        ciphertext1, ciphertext2, lut, log_ddt
+                    )[0].double()
+            else:
+                scores += candidate_log_ddt(ciphertext1, ciphertext2, lut, log_ddt)[0].double()
         done += n
         if done % (args.batch * 20) == 0 or done == args.pairs:
             elapsed = time.perf_counter() - start
@@ -105,6 +134,7 @@ def main() -> int:
         "elapsed_s": float(time.perf_counter() - start),
         "mean_rank": float(ranks.mean()),
         "top1": float((ranks <= 1).double().mean()),
+        "filtered_pairs": float(filtered_pairs),
     }
     details = {
         "true_chunks": [int(value) for value in truth.tolist()],
