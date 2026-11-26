@@ -29,7 +29,7 @@ from des_ml.des_torch import des_encrypt_torch, key_schedule_torch, rand64  # no
 from des_ml.eval.ddt_rank import log_ddt_tensor, sample_keys, sbox_lut  # noqa: E402
 from des_ml.key_schedule import recover_master_keys  # noqa: E402
 from des_ml.manifest import RunWriter, update_latest  # noqa: E402
-from des_ml.models.chunk_scorer import ChunkScorer  # noqa: E402
+from des_ml.models.chunk_scorer import ChunkScorer, candidate_log_ddt  # noqa: E402
 from des_ml.train.train_chunk_scorer import make_batch  # noqa: E402
 
 
