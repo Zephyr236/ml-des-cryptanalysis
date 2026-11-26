@@ -324,3 +324,121 @@ def test_main_disables_claude_with_opt_in_and_empty_event(monkeypatch, tmp_path)
     )
     assert review_agent.main() == 0
     assert "workflow_dispatch" in posted[-1]
+
+
+def _research_review() -> dict:
+    return {
+        "summary": "A research change with a measurable claim.",
+        "verdict": "needs-work",
+        "research_analysis": {
+            "research_content": True,
+            "hypothesis": "A 4-round KPA scorer has signal.",
+            "design": "Key-disjoint splits, 64 pairs; no budget-matched baseline yet.",
+            "results": "The metric is at chance; the negative is not yet controlled.",
+            "missing_analyses": ["Budget-matched random search", "Rank diagnostic"],
+            "next_experiments": ["Run the DDT rank with a real characteristic"],
+            "confidence": "medium",
+        },
+        "findings": [],
+        "recommendations": [
+            {
+                "priority": "high",
+                "kind": "experiment",
+                "title": "Add a budget-matched baseline",
+                "detail": "Compare against random search at the same key-trial budget.",
+            }
+        ],
+    }
+
+
+def test_format_comment_includes_research_analysis():
+    text = review_agent.format_comment(_research_review(), 7, "OpenCode Zen Go / test")
+    assert "## Research analysis" in text
+    assert "**Hypothesis:**" in text
+    assert "**Missing analyses:**" in text
+    assert "Budget-matched random search" in text
+    assert "Add a budget-matched baseline" in text
+    assert "## Code findings" in text
+    assert "No code findings." in text
+
+
+def test_research_report_body_includes_sections():
+    body = review_agent.research_report_body(
+        _research_review(), 7, "TH-1 trail search", "a" * 40, "OpenCode Zen Go / test"
+    )
+    assert "Research analysis — PR #7" in body
+    assert "TH-1 trail search" in body
+    assert "Missing analyses" in body
+    assert "Rank diagnostic" in body
+    assert "Add a budget-matched baseline" in body
+
+
+def test_is_research_diff():
+    assert review_agent.is_research_diff("+++ b/src/des_ml/des.py\n")
+    assert review_agent.is_research_diff("+++ b/configs/eval/x.yaml\n")
+    assert review_agent.is_research_diff("+++ b/results/stage1/run/manifest.json\n")
+    assert not review_agent.is_research_diff("+++ b/docs/REVIEW-AGENT.md\n")
+    assert not review_agent.is_research_diff("+++ b/.github/workflows/ci.yml\n")
+
+
+def test_create_or_comment_issue_retries_without_labels(monkeypatch):
+    monkeypatch.setattr(review_agent, "find_existing_issue", lambda *a, **k: None)
+    calls = []
+
+    def fake_github_json(url, token, method="GET", payload=None):
+        calls.append((url, method, payload))
+        if len(calls) == 1:
+            raise urllib.error.HTTPError(url, 422, "Unprocessable", {}, None)
+        return {}
+
+    monkeypatch.setattr(review_agent, "github_json", fake_github_json)
+    review_agent.create_or_comment_issue("o/r", "t", "title", "body", ["missing-label"])
+    assert len(calls) == 2
+    assert "labels" in calls[0][2]
+    assert "labels" not in calls[1][2]
+
+
+def test_file_research_report_uses_research_labels(monkeypatch):
+    captured = {}
+
+    def fake_create(repo, token, title, body, labels, lookup_label=None):
+        captured.update(title=title, labels=labels, lookup=lookup_label, body=body)
+
+    monkeypatch.setattr(review_agent, "create_or_comment_issue", fake_create)
+    review_agent.file_research_report(
+        "o/r", "t", 7, "TH-1", "a" * 40, _research_review(), "backend"
+    )
+    assert captured["title"].startswith("[research] PR #7")
+    assert "research-review" in captured["labels"]
+    assert "analysis" in captured["labels"]
+    assert captured["lookup"] == "research-review"
+
+
+def test_main_files_research_report_for_research_diff(monkeypatch, tmp_path):
+    monkeypatch.setenv("OPENCODE_ZEN_API_KEY", "test-key")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
+    _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
+    (tmp_path / "pr.diff").write_text("+++ b/src/des_ml/des.py\n", encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["review_agent.py"])
+    monkeypatch.setattr(
+        review_agent, "call_opencode", lambda *a, **k: json.dumps(_research_review())
+    )
+    posted, reports, recommendations = [], [], []
+    monkeypatch.setattr(
+        review_agent, "post_comment", lambda repo, number, token, body: posted.append(body)
+    )
+    monkeypatch.setattr(
+        review_agent,
+        "file_research_report",
+        lambda repo, token, number, title, sha, review, backend: reports.append(number),
+    )
+    monkeypatch.setattr(
+        review_agent,
+        "file_recommendation",
+        lambda repo, token, rec, number, title: recommendations.append(rec["title"]),
+    )
+    assert review_agent.main() == 0
+    assert posted
+    assert reports == [7]
+    assert recommendations == ["Add a budget-matched baseline"]

@@ -2,7 +2,15 @@
 
 The `code-review` workflow runs an LLM reviewer on every pull request. It
 is **advisory**: it posts a comment, files `agent-review` issues for
-high/medium findings, and never blocks a merge (ADR-0003).
+high/medium code findings, and never blocks a merge (ADR-0003).
+
+It also reviews the **research content**: hypothesis, experimental
+design, result interpretation, missing analyses and next experiments. For
+PRs touching `src/`, `configs/` or `results/`, it files a
+`[research] PR #N` issue with the full report (labels `research-review`,
+`analysis`); high/medium recommendations become their own `[research]`
+issues (label `recommendation`). A negative result gets the same analysis
+as a positive one; the next experiments are recorded, not lost.
 
 ## Transports
 

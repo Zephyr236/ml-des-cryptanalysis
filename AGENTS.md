@@ -205,6 +205,19 @@ results/<stage>/<run_id>/
 
 ## 7. 评审 Agent 的审查清单
 
+评审 agent **同时审查代码与研究内容**。研究部分必须回答：
+
+- **R1 问题与假设**：问题是否可否证？是否把"区分"当成"密钥恢复"？是否把 toy key space 当成 56-bit DES？
+- **R2 设计**：密钥划分、预算匹配基线（随机搜索、穷举、经典差分/线性）、种子、置信区间、对照、算力计量是否齐全？
+- **R3 结果**：每个结论是否由 metrics 支撑？负结果解释是否正确？缺少哪些分析（排名诊断、消融、校准、power、多重比较、与经典上界对比）？
+- **R4 下一步**：给出具体、按优先级排序的后续实验；说明什么结果会改变结论。
+
+输出中的 `research_analysis` 和 `recommendations` 会渲染在 PR 评论里。对于触及
+`src/`、`configs/` 或 `results/` 的 PR，agent 会开一个 `[research] PR #N` issue
+保存完整分析报告（标签 `research-review`、`analysis`）；high/medium 建议各自开
+`[research] ...` issue（标签 `recommendation`）。同类标题精确匹配去重，标签缺失
+不会丢失报告。以下代码清单同样适用：
+
 按严重度输出，必须带文件/行号或明确说明是推测：
 
 1. **密码学正确性**：表、轮数、末轮交换、密钥编排、round-reduced 语义。
