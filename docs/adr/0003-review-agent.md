@@ -74,6 +74,17 @@ as issues.
    `REVIEW_MODEL` (default `claude-sonnet-5-5`); the OpenCode transport
    reads `OPENCODE_MODEL` (default `deepseek-v4.1-flash`) and
    `OPENCODE_BASE_URL`.
+9. **The remit includes research analysis, not only code.** The agent
+   returns a `research_analysis` object (hypothesis, design, results,
+   missing analyses, next experiments, confidence) and a prioritised
+   `recommendations` list. For PRs touching `src/`, `configs/` or
+   `results/` where the model reports research content, it files a
+   `[research] PR #N analysis` issue containing the full report, labelled
+   `research-review` and `analysis`. High/medium recommendations become
+   separate `[research] PR #N: ...` issues labelled `recommendation`.
+   Titles are deduplicated by exact match against open issues created by
+   the agent; a missing label never loses the report. At most 5 code
+   findings and 3 recommendations are filed per review.
 
 ## Consequences
 
@@ -82,6 +93,9 @@ as issues.
   superseded reviews.
 - False positives are expected. They become issues, not blockers, and
   can be closed with a one-line rationale.
+- Research reports add issue volume, including on negative results.
+  That is the point: the analysis and the next experiments are recorded
+  next to the PR, not lost in a chat log.
 - The agent cannot verify claims that require running training. It can
   check that a manifest exists and that its metrics support the PR's
   sentences, but the scientific judgement remains human.

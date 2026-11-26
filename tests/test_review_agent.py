@@ -1,3 +1,4 @@
+import io
 import json
 import sys
 import urllib.error
@@ -133,7 +134,7 @@ def test_build_prompt_includes_metrics_and_pr_metadata(monkeypatch, tmp_path):
     )
     monkeypatch.setattr(review_agent, "REPO_ROOT", tmp_path)
     prompt = review_agent.build_prompt(
-        "diff --git a/x b/x\n+++ b/results/stage1/run-1/manifest.json\n",
+        "diff --git a/results/stage1/run-1/manifest.json b/results/stage1/run-1/manifest.json\n",
         {"title": "T", "head_sha": "abc123", "base_sha": "def456", "body": "body"},
     )
     assert "metrics_final" in prompt
@@ -324,3 +325,327 @@ def test_main_disables_claude_with_opt_in_and_empty_event(monkeypatch, tmp_path)
     )
     assert review_agent.main() == 0
     assert "workflow_dispatch" in posted[-1]
+
+
+def _research_review() -> dict:
+    return {
+        "summary": "A research change with a measurable claim.",
+        "verdict": "needs-work",
+        "research_analysis": {
+            "research_content": True,
+            "hypothesis": "A 4-round KPA scorer has signal.",
+            "design": "Key-disjoint splits, 64 pairs; no budget-matched baseline yet.",
+            "results": "The metric is at chance; the negative is not yet controlled.",
+            "missing_analyses": ["Budget-matched random search", "Rank diagnostic"],
+            "next_experiments": ["Run the DDT rank with a real characteristic"],
+            "confidence": "medium",
+        },
+        "findings": [],
+        "recommendations": [
+            {
+                "priority": "high",
+                "kind": "experiment",
+                "title": "Add a budget-matched baseline",
+                "detail": "Compare against random search at the same key-trial budget.",
+            }
+        ],
+    }
+
+
+def test_format_comment_includes_research_analysis():
+    text = review_agent.format_comment(_research_review(), 7, "OpenCode Zen Go / test")
+    assert "## Research analysis" in text
+    assert "**Hypothesis:**" in text
+    assert "**Missing analyses:**" in text
+    assert "Budget-matched random search" in text
+    assert "Add a budget-matched baseline" in text
+    assert "## Code findings" in text
+    assert "No code findings." in text
+
+
+def test_research_report_body_includes_sections():
+    body = review_agent.research_report_body(
+        _research_review(), 7, "TH-1 trail search", "a" * 40, "OpenCode Zen Go / test"
+    )
+    assert "Research analysis — PR #7" in body
+    assert "TH-1 trail search" in body
+    assert "Missing analyses" in body
+    assert "Rank diagnostic" in body
+    assert "Add a budget-matched baseline" in body
+
+
+def test_is_research_diff():
+    def diff(path):
+        return f"diff --git a/{path} b/{path}\n--- a/{path}\n+++ b/{path}\n"
+
+    assert review_agent.is_research_diff(diff("src/des_ml/des.py"))
+    assert review_agent.is_research_diff(diff("configs/eval/x.yaml"))
+    assert review_agent.is_research_diff(diff("results/stage1/run/manifest.json"))
+    assert review_agent.is_research_diff(diff("src/des_ml/des.py").replace("+++ b/src/des_ml/des.py", "+++ /dev/null"))
+    assert not review_agent.is_research_diff(diff("docs/REVIEW-AGENT.md"))
+    assert not review_agent.is_research_diff(diff(".github/workflows/ci.yml"))
+
+
+def test_create_or_comment_issue_retries_without_labels(monkeypatch):
+    monkeypatch.setattr(review_agent, "find_existing_issue", lambda *a, **k: None)
+    calls = []
+
+    def fake_github_json(url, token, method="GET", payload=None):
+        calls.append((url, method, payload))
+        if len(calls) == 1:
+            raise urllib.error.HTTPError(
+                url, 422, "Unprocessable", {}, io.BytesIO(b'{"errors":[{"field":"labels"}]}')
+            )
+        return {}
+
+    monkeypatch.setattr(review_agent, "github_json", fake_github_json)
+    review_agent.create_or_comment_issue("o/r", "t", "title", "body", ["missing-label"])
+    assert len(calls) == 2
+    assert "labels" in calls[0][2]
+    assert "labels" not in calls[1][2]
+
+
+def test_file_research_report_uses_research_labels(monkeypatch):
+    captured = {}
+
+    def fake_create(repo, token, title, body, labels):
+        captured.update(title=title, labels=labels, body=body)
+
+    monkeypatch.setattr(review_agent, "create_or_comment_issue", fake_create)
+    review_agent.file_research_report(
+        "o/r", "t", 7, "TH-1", "a" * 40, _research_review(), "backend"
+    )
+    assert captured["title"] == "[research] PR #7 analysis"
+    assert "research-review" in captured["labels"]
+    assert "analysis" in captured["labels"]
+
+
+def test_main_files_research_report_for_research_diff(monkeypatch, tmp_path):
+    monkeypatch.setenv("OPENCODE_ZEN_API_KEY", "test-key")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
+    _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
+    (tmp_path / "pr.diff").write_text(
+        "diff --git a/src/des_ml/des.py b/src/des_ml/des.py\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(sys, "argv", ["review_agent.py"])
+    monkeypatch.setattr(
+        review_agent, "call_opencode", lambda *a, **k: json.dumps(_research_review())
+    )
+    posted, reports, recommendations = [], [], []
+    monkeypatch.setattr(
+        review_agent, "post_comment", lambda repo, number, token, body: posted.append(body)
+    )
+    monkeypatch.setattr(
+        review_agent,
+        "file_research_report",
+        lambda repo, token, number, title, sha, review, backend: reports.append(number),
+    )
+    monkeypatch.setattr(
+        review_agent,
+        "file_recommendation",
+        lambda repo, token, rec, number, title: recommendations.append(rec["title"]),
+    )
+    assert review_agent.main() == 0
+    assert posted
+    assert reports == [7]
+    assert recommendations == ["Add a budget-matched baseline"]
+
+
+def test_find_existing_issue_is_unlabeled_and_paginates(monkeypatch):
+    filler = [{"number": n, "title": f"other-{n}"} for n in range(100)]
+    pages = {
+        1: filler,
+        2: [
+            {
+                "number": 200,
+                "title": "Target Title",
+                "user": {"login": "github-actions[bot]"},
+                "body": "",
+            }
+        ],
+    }
+
+    def fake_github_json(url, token, method="GET", payload=None):
+        page = int(url.split("&page=")[1].split("&")[0])
+        return pages.get(page, [])
+
+    monkeypatch.setattr(review_agent, "github_json", fake_github_json)
+    found = review_agent.find_existing_issue("o/r", "t", "target title")
+    assert found["number"] == 200
+
+
+def test_parse_json_rejects_non_object():
+    with pytest.raises(ValueError):
+        review_agent.parse_json("[1, 2, 3]")
+
+
+def test_format_comment_tolerates_malformed_shapes():
+    review = {
+        "summary": "",
+        "verdict": "sound",
+        "research_analysis": ["not", "a", "dict"],
+        "findings": "not a list",
+        "recommendations": [1, {"priority": "high", "kind": "experiment", "title": "T", "detail": "D"}],
+    }
+    text = review_agent.format_comment(review, 1, "backend")
+    assert "No code findings." in text
+    assert "T" in text
+    assert "Recommendation details" in text
+
+
+def test_create_or_comment_issue_raises_non_label_422(monkeypatch):
+    monkeypatch.setattr(review_agent, "find_existing_issue", lambda *a, **k: None)
+    calls = []
+
+    def fake_github_json(url, token, method="GET", payload=None):
+        calls.append(payload)
+        raise urllib.error.HTTPError(
+            url, 422, "Unprocessable", {}, io.BytesIO(b'{"message":"Validation Failed"}')
+        )
+
+    monkeypatch.setattr(review_agent, "github_json", fake_github_json)
+    with pytest.raises(urllib.error.HTTPError):
+        review_agent.create_or_comment_issue("o/r", "t", "title", "body", ["label"])
+    assert len(calls) == 1
+
+
+def test_find_existing_issue_ignores_human_issue(monkeypatch):
+    human = {
+        "number": 1,
+        "title": "Target Title",
+        "user": {"login": "alice"},
+        "body": "human issue",
+    }
+
+    monkeypatch.setattr(
+        review_agent, "github_json", lambda url, token, method="GET", payload=None: [human]
+    )
+    assert review_agent.find_existing_issue("o/r", "t", "target title") is None
+
+
+def test_find_existing_issue_matches_bot_issue(monkeypatch):
+    bot = {
+        "number": 2,
+        "title": "Target Title",
+        "user": {"login": "github-actions[bot]"},
+        "body": "",
+    }
+
+    monkeypatch.setattr(
+        review_agent, "github_json", lambda url, token, method="GET", payload=None: [bot]
+    )
+    assert review_agent.find_existing_issue("o/r", "t", "target title")["number"] == 2
+
+
+def test_main_skips_report_when_research_content_false(monkeypatch, tmp_path):
+    monkeypatch.setenv("OPENCODE_ZEN_API_KEY", "test-key")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
+    _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
+    (tmp_path / "pr.diff").write_text(
+        "diff --git a/src/des_ml/des.py b/src/des_ml/des.py\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(sys, "argv", ["review_agent.py"])
+    review = _research_review()
+    review["research_analysis"]["research_content"] = False
+    monkeypatch.setattr(review_agent, "call_opencode", lambda *a, **k: json.dumps(review))
+    monkeypatch.setattr(review_agent, "post_comment", lambda *a, **k: None)
+    reports, recommendations = [], []
+    monkeypatch.setattr(
+        review_agent,
+        "file_research_report",
+        lambda *a, **k: reports.append(a),
+    )
+    monkeypatch.setattr(
+        review_agent,
+        "file_recommendation",
+        lambda *a, **k: recommendations.append(a),
+    )
+    assert review_agent.main() == 0
+    assert reports == []
+    assert recommendations == []
+
+
+def test_research_report_body_tolerates_malformed_fields():
+    review = {
+        "summary": ["not", "a", "string"],
+        "verdict": "sound",
+        "research_analysis": {
+            "research_content": True,
+            "hypothesis": ["list"],
+            "design": None,
+            "results": 3,
+            "missing_analyses": "not a list",
+            "next_experiments": [1, 2],
+            "confidence": "low",
+        },
+        "findings": "bad",
+        "recommendations": [{"priority": "low", "kind": "code", "title": ["t"], "detail": None}],
+    }
+    body = review_agent.research_report_body(review, 1, "title", "sha", "backend")
+    assert "Hypothesis" in body
+    assert "Recommendation" in body
+
+
+def test_deleted_manifest_is_not_changed_evidence():
+    diff = (
+        "diff --git a/results/stage1/r/manifest.json b/results/stage1/r/manifest.json\n"
+        "--- a/results/stage1/r/manifest.json\n"
+        "+++ /dev/null\n"
+    )
+    assert review_agent._changed_manifests(diff) == set()
+
+
+def test_safe_title_sanitizes_and_caps():
+    title = review_agent._safe_title("a\nb" + "x" * 200, "[review]", "fallback")
+    assert title.startswith("[review] a b")
+    assert "\n" not in title
+    assert len(title) <= len("[review] ") + 120
+    assert review_agent._safe_title("", "[review]", "fallback") == "[review] fallback"
+
+
+def test_md_cell_escapes_pipes_and_newlines():
+    assert review_agent._md_cell("a|b\nc") == "a\\|b c"
+
+
+def test_main_skips_recs_for_non_research_diff(monkeypatch, tmp_path):
+    monkeypatch.setenv("OPENCODE_ZEN_API_KEY", "test-key")
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
+    _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
+    (tmp_path / "pr.diff").write_text(
+        "diff --git a/docs/REVIEW-AGENT.md b/docs/REVIEW-AGENT.md\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(sys, "argv", ["review_agent.py"])
+    monkeypatch.setattr(
+        review_agent, "call_opencode", lambda *a, **k: json.dumps(_research_review())
+    )
+    monkeypatch.setattr(review_agent, "post_comment", lambda *a, **k: None)
+    reports, recommendations = [], []
+    monkeypatch.setattr(
+        review_agent, "file_research_report", lambda *a, **k: reports.append(a)
+    )
+    monkeypatch.setattr(
+        review_agent, "file_recommendation", lambda *a, **k: recommendations.append(a)
+    )
+    assert review_agent.main() == 0
+    assert reports == []
+    assert recommendations == []
+
+
+def test_file_recommendation_title_includes_pr(monkeypatch):
+    captured = {}
+
+    def fake_create(repo, token, title, body, labels):
+        captured["title"] = title
+
+    monkeypatch.setattr(review_agent, "create_or_comment_issue", fake_create)
+    review_agent.file_recommendation(
+        "o/r",
+        "t",
+        {"priority": "high", "kind": "experiment", "title": "Do X", "detail": "d"},
+        7,
+        "PR",
+    )
+    assert captured["title"].startswith("[research] PR #7:")
