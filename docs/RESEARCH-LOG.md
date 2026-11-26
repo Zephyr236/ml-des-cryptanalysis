@@ -1,3 +1,16 @@
+## 2026-11-26 — Merge provenance fix
+
+**What.** Squash merge rewrites branch commits, so the manifests merged
+in PR #12 and PR #14 pointed at commits that would stop being ancestors
+of `main`. The repository now uses merge commits only, the
+`main-provenance` workflow audits every push to `main`, and the heads of
+the two affected PRs are preserved as `archive/pr-12-head` and
+`archive/pr-14-head` tags.
+
+**Why.** A result is only reproducible if the commit recorded in its
+manifest can still be checked out from the repository. Provenance is
+part of the experiment, not bookkeeping.
+
 ## 2026-11-26 — Theory core (DDT/LAT, schedule coverage, chunk algebra)
 
 **What.** The exact classical primitives are implemented and committed:
