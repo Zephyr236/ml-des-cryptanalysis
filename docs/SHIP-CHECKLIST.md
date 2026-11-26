@@ -41,10 +41,14 @@ readiness without blocking day-to-day work.
 - [ ] 12/14/16-round negative results recorded with a rank diagnostic
 - [ ] Compute compared with `2^56` brute force in encryption equivalents
 
-## Release blockers (template — do not uncomment until release)
+## Release blockers (template)
 
-<!--
-- [ ] BLOCKER: every experiment in docs/EXPERIMENTS.md has a committed manifest
-- [ ] BLOCKER: no open issue labelled `blocker`
-- [ ] BLOCKER: REVIEW.md signed by the research owner
--->
+The gate parses checklist syntax even inside HTML comments, so this
+section deliberately contains **no** checkbox lines until a release is
+being prepared. When that happens, add items in this form:
+
+`- [ ] BLOCKER: <condition that must hold for this release>`
+
+Example conditions for the first paper release: every experiment in
+`docs/EXPERIMENTS.md` has a committed manifest; no open issue labelled
+`blocker`; the report has been signed by the research owner.
