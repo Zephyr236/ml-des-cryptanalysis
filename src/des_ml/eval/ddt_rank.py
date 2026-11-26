@@ -19,7 +19,7 @@ import numpy as np
 import torch
 
 from ..data import SPLIT_TEST, key_split
-from ..des import E, IP, sbox_output
+from ..des import IP, E, sbox_output
 from ..des_torch import des_encrypt_torch, key_schedule_torch, permute_torch, rand64
 from ..theory.ddt import ddt_tables
 
