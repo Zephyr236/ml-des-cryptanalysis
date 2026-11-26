@@ -1,0 +1,21 @@
+run_name: chunk-scorer-des6-small
+rounds: 6
+mode: cpa
+delta: 0x0000001010000000
+
+model:
+  hidden: 64
+  dropout: 0.05
+
+train:
+  keys_per_batch: 8
+  pairs_per_key: 16
+  steps: 800
+  lr: 0.001
+  weight_decay: 0.01
+  log_every: 50
+  eval_every: 100
+  eval_keys: 32
+  eval_pairs: 64
+  seed: 0
+  device: cpu
