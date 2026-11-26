@@ -1,0 +1,17 @@
+run_name: th-1-trail-search
+max_rounds: 5
+beam: 2000
+branch: 4
+combos: 12
+seed: 0
+device: auto
+validation:
+  rounds:
+  - 1
+  - 2
+  - 3
+  samples:
+    1: 100000
+    2: 500000
+    3: 1000000
+  batch: 8192

@@ -1,3 +1,26 @@
+## 2026-11-26 — TH-1 differential trails found and validated
+
+**What.** Beam search over 64 single-bit start differences produced active
+trails for R=1..5. Run `20261126T135117Z-fc37e176-f9c5d98f-s0`.
+
+**Validation.** The full state-difference path was sampled on the real
+cipher: r=1 0.25028 vs 0.25 (n=100k), r=2 0.24907 vs 0.25 (n=500k),
+r=3 0.007316 vs 0.007324 (n=1M). All three pass the ADR-0009 one-sided
+check.
+
+**Key trails.** The r=3 trail (`ΔP=0x1000`, p=2^-7.093) has last-round
+S-box input differences `[0,8,0,0,0,0,0,8]`; it is the first real
+candidate for a characteristic-filtered DDT rank on 4 rounds. The r=4
+trail (`ΔP=0x10000`, p=2^-17.642) is the candidate for 5 rounds. The r=5
+trail (`2^-27.694`) is too weak for a feasible R=6 attack at 64 pairs.
+
+**Caveat.** The search is a lower bound under `beam=2000, branch=4,
+combos=12`; a wider search may find better trails.
+
+**Next.** Filter pairs by the r=3 last-round `a_j`, rerun the DDT rank on
+4 rounds, and measure the true chunk rank for S1 and S7. Then repeat for
+5 rounds with the r=4 trail.
+
 ## 2026-11-26 — DDT rank baseline is at chance without a characteristic
 
 **What.** Six exact log-DDT runs: R=4/6/8, KPA and CPA (one-bit delta),

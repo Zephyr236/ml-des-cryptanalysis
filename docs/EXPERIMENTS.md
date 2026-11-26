@@ -26,7 +26,7 @@ memory smoke passes; a GPU job produces a committed manifest.
 
 | ID | R | Model | Primary metric | Status |
 |---|---|---|---|---|
-| TH-1 | 1–16 | exact DDT/LAT, branch-and-bound trails, Matsui linear | checksums; MC agreement | partial (#13, `20261126T082618Z-5b997b4e-3f683965-s0`): DDT/LAT + coverage; trail search pending (#2) |
+| TH-1 | 1–16 | exact DDT/LAT, beam trail search, Matsui linear | checksums; MC agreement | partial (#13: DDT/LAT + coverage; #43: beam trail search); Matsui linear pending (#2) |
 | TH-2 | 2–16 | DP/collision certificate | `C_r`, `p_r`, implied N + CI | planned (#2) |
 | TH-3 | 4–16 | predicted rank curves | predicted vs observed rank | planned (#2) |
 | DG-4 | 4 | SPADE chunk scorer, CPA | chunk AUC vs log-DDT, ECE | planned (#3) |
@@ -62,6 +62,33 @@ characteristic and keep right pairs. It establishes that TH-1 trail
 selection and right-pair filtering are prerequisites for DG-4, not
 optional refinements. The SPADE residual must be initialised from a real
 characteristic, not from an arbitrary delta.
+
+## TH-1 trail search (2026-11-26)
+
+Beam search over all 64 single-bit start differences; `beam=2000`,
+`branch=4`, `combos=12`, best `active` trail per round. Run
+`20261126T135117Z-fc37e176-f9c5d98f-s0` on the RTX 2060 host.
+
+| Rounds | Best active log2 p | Probability | Last-round S-box inputs | Validation |
+|---|---|---|---|---|
+| 1 | -2.000 | 0.25 | S5=8 | 0.25028 vs 0.25 (n=100k) |
+| 2 | -2.000 | 0.25 | S5=8 | 0.24907 vs 0.25 (n=500k) |
+| 3 | -7.093 | 0.00732 | S1=8, S7=8 | 0.007316 vs 0.007324 (n=1M) |
+| 4 | -17.642 | 4.89e-6 | S2=5, S3=16, S6=7, S7=48 | not sampled |
+| 5 | -27.694 | 4.60e-9 | S1=10, S2=32, S5=3, S6=52 | not sampled |
+
+The r=1 overall `best` is a trivial probability-1 trail with no active
+S-box; it is reported separately and is not used for a distinguisher.
+The r=3 trail has input difference `0x1000`, probability `2^-7.093`, and
+last-round input-difference vector `[0, 8, 0, 0, 0, 0, 0, 8]`; it is the
+first candidate for a characteristic-filtered rank attack on 4 rounds.
+The r=4 trail (`ΔP=0x10000`, `2^-17.642`) is the candidate for 5 rounds.
+The r=5 trail is too weak (`2^-27.694`) for a feasible R=6 attack at this
+pair budget; a wider start set or a better search is a separate
+experiment.
+
+**Caveat.** Beam search is a lower bound: these are the best trails found
+under the recorded parameters, not proofs of optimality (ADR-0009).
 
 ## Stage 2 — key recovery
 
