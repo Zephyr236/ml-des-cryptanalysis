@@ -1,0 +1,21 @@
+{
+  "best": {
+    "ddt_acc": 0.0,
+    "ddt_mean_rank": 33.6171875,
+    "ddt_top5": 0.05859375,
+    "model_acc": 0.390625,
+    "model_mean_rank": 33.37109375,
+    "model_top5": 0.77734375,
+    "train_loss": 4.225928783416748
+  },
+  "final": {
+    "best_model_acc": 0.390625,
+    "ddt_acc": 0.0,
+    "ddt_mean_rank": 33.6171875,
+    "ddt_top5": 0.037109375,
+    "model_acc": 0.390625,
+    "model_mean_rank": 9.1875,
+    "model_top5": 0.765625,
+    "train_loss": 1.8206610679626465
+  }
+}

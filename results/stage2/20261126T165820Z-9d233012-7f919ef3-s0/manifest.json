@@ -1,0 +1,53 @@
+{
+  "artifacts": [
+    "config.yaml",
+    "metrics.json",
+    "metrics.jsonl",
+    "scores.json",
+    "train.log"
+  ],
+  "code_sha": "9d23301236342aa6fc4705422f762f94ec17cf3a",
+  "command": "python scripts/differential_match.py --key 0x133457799BBCDFF1 --delta 0x0000001010000000 --trail-l5 0x0C000060 --rounds 6 --pairs 323000000 --batch 65536 --device cuda --out results/stage2 --filter-vector 8,1,19,48,8,4,2,32 --top-k 1",
+  "config_path": "scripts/differential_match.py",
+  "config_sha256": "7f919ef32d63afa3fa81fe81f42aceff87e569f93f84d870471b8d8033dbb3ec",
+  "created_at": "2026-11-26T16:58:20Z",
+  "environment": {
+    "cuda": "12.4",
+    "cuda_available": true,
+    "gpu": "NVIDIA GeForce RTX 2060",
+    "machine": "AMD64",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.16",
+    "torch": "2.6.0+cu124"
+  },
+  "git_dirty": false,
+  "metrics": {
+    "best": {
+      "elapsed_s": 1116.2415249999613,
+      "filtered_pairs": 4.0,
+      "mean_rank": 1.5,
+      "pairs": 323000000.0,
+      "recovered": 0.0,
+      "rounds": 6.0,
+      "top1": 0.0
+    },
+    "final": {
+      "elapsed_s": 1116.2415249999613,
+      "filtered_pairs": 4.0,
+      "mean_rank": 1.5,
+      "pairs": 323000000.0,
+      "recovered": 0.0,
+      "rounds": 6.0,
+      "top1": 0.0
+    }
+  },
+  "run_id": "20261126T165820Z-9d233012-7f919ef3-s0",
+  "schema_version": 1,
+  "seed": 0,
+  "status": "completed",
+  "tags": {
+    "kind": "differential-match",
+    "rounds": 6,
+    "stage": "stage2"
+  }
+}

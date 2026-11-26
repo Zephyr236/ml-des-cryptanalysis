@@ -53,6 +53,10 @@ working 6-round known/chosen-plaintext attack with an AI component; the
   complexity, not a practical break of DES.
 - The right-pair filter is key-independent and can be applied before
   any key guess; it removes most noise and makes the DDT rank usable.
+- **Result:** the match test over 323M pairs kept four pairs and put
+  all true chunks at rank 1.5; top-2 recovered the effective key
+  `0x123456789ABCDEF0`, parity-equivalent to the target
+  `0x133457799BBCDFF1`, and passed real re-encryption.
 - The chunk scorer's weak S-boxes at 2 rounds and the flat 6-round
   neural training are recorded as negative results.
 - A future neural scorer must beat the DDT rank on held-out keys; the

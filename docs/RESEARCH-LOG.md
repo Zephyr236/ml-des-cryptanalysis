@@ -1,3 +1,26 @@
+## 2026-11-27 — 6-round DES CPA key recovery
+
+Run `20261126T165820Z-9d233012-7f919ef3-s0`: 323M chosen plaintext
+pairs under `ΔP=0x0000001010000000`; the full-active 5-round trail
+filter keeps 4 pairs. The plain log-DDT rank was at chance on these
+pairs, but the characteristic-match test (partially decrypt the last
+round and check the trail's `L5=0x0C000060` difference) puts **all
+eight true chunks at rank 1.5** — each tied with exactly one wrong
+candidate. Top-2 over the eight S-boxes gives 256 round-key
+combinations; after key-schedule inversion (256 completions each),
+48,896 candidate master keys were tried and the effective key
+`0x123456789ABCDEF0` verified by real re-encryption (run
+`20261126T171750Z-0b60a9d9-52394cf1-s0`). This key is parity-equivalent
+to the target `0x133457799BBCDFF1`; both produce the FIPS ciphertext
+`0x85E813540F0AB405` for `0x0123456789ABCDEF`.
+
+**AI status.** The 2-round SPADE chunk scorer reaches 0.3906 chunk
+accuracy / 0.7656 top-5 versus the exact DDT's 0.0000 / 0.0371. The
+6-round chunk scorer with the 4-round difference reached only 0.0195 at
+step 500 (chance 0.0156), so the 6-round key recovery is the classical
+characteristic match, not a neural ranker. The AI part of the project
+is validated at 2 rounds; scaling it to 6 remains open.
+
 ## 2026-11-26 — AI chunk scorer at 2 rounds; 6-round attack
 
 **2-round AI scorer.** Run `20261126T150811Z-fa7d0232-c7d52488-s0`:

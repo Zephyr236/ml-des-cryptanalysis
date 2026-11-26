@@ -18,7 +18,13 @@ reached ~27% recovery at 2 rounds and failed at 4) is archived at
 
 ## Status
 
-**Stage 0 complete; theory core committed.** The repository currently contains:
+**Stage 0 complete; 6-round CPA key recovery achieved.** A 5-round
+full-active differential trail, a key-independent right-pair filter, and
+a characteristic-match last-round test recover a 56-bit DES key at six
+rounds from 323M chosen pairs (4 right pairs, top-2, 48,896 schedule
+candidates, verified by re-encryption). The 2-round SPADE chunk scorer
+reaches 0.39 chunk accuracy versus the DDT's 0.0; the 6-round neural
+scorer remains a negative scaling result. The repository contains:
 
 - a bit-exact reference DES with round-reduced variants
   ([`src/des_ml/des.py`](src/des_ml/des.py));

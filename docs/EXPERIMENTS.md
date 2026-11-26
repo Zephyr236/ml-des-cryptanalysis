@@ -191,8 +191,16 @@ result establishes that the learning pipeline is real at 2 rounds.
 - Characteristic match: the DDT ranker scores wrong high-probability
   output differences above true right pairs. The standard test instead
   checks the trail's predicted `L5` difference after partially
-  decrypting the last round. Run with the same 323M-pair full filter is
-  in progress; its result replaces this paragraph when merged.
+  decrypting the last round. Run
+  `20261126T165820Z-9d233012-7f919ef3-s0` (323M pairs, 4 filtered)
+  puts **every true chunk at rank 1.5** — a systematic two-candidate
+  tie. Top-2 over all eight S-boxes (256 round-key combinations, 48,896
+  key-schedule candidates) recovers the 56-bit effective key
+  `0x123456789ABCDEF0` (run
+  `20261126T171750Z-0b60a9d9-52394cf1-s0`, `recovered=1`). This is
+  parity-equivalent to the target `0x133457799BBCDFF1`: both give the
+  FIPS vector `0x85E813540F0AB405`, and the recovered key re-encrypts
+  the target's verification blocks.
 - Neural 6-round chunk-scorer and PairCNN distinguisher training did not
   move above chance in early evaluations; this negative scaling result
   is recorded in ADR-0010.

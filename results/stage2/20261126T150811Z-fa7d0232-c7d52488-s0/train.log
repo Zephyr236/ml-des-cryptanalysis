@@ -1,0 +1,73 @@
+step=1 loss=5.337149 lr=1.00e-03
+step=50 loss=5.032939 lr=9.99e-04
+step=100 loss=4.786530 lr=9.97e-04
+step=150 loss=4.687065 lr=9.94e-04
+step=200 loss=4.408424 lr=9.89e-04
+step=250 loss=4.225929 lr=9.83e-04
+eval step=250 model_acc=0.0215 model_rank=33.37 ddt_acc=0.0000 ddt_rank=33.30
+step=300 loss=4.310308 lr=9.76e-04
+step=350 loss=4.355072 lr=9.67e-04
+step=400 loss=4.250131 lr=9.57e-04
+step=450 loss=4.207495 lr=9.46e-04
+step=500 loss=4.182342 lr=9.33e-04
+eval step=500 model_acc=0.0156 model_rank=30.45 ddt_acc=0.0000 ddt_rank=32.18
+step=550 loss=4.205224 lr=9.19e-04
+step=600 loss=4.182341 lr=9.05e-04
+step=650 loss=4.261081 lr=8.89e-04
+step=700 loss=4.172258 lr=8.72e-04
+step=750 loss=4.199980 lr=8.54e-04
+eval step=750 model_acc=0.0469 model_rank=29.91 ddt_acc=0.0000 ddt_rank=31.57
+step=800 loss=4.120149 lr=8.35e-04
+step=850 loss=3.921782 lr=8.15e-04
+step=900 loss=3.824490 lr=7.94e-04
+step=950 loss=3.521461 lr=7.72e-04
+step=1000 loss=3.448143 lr=7.50e-04
+eval step=1000 model_acc=0.1309 model_rank=22.54 ddt_acc=0.0000 ddt_rank=32.73
+step=1050 loss=3.408921 lr=7.27e-04
+step=1100 loss=3.395320 lr=7.03e-04
+step=1150 loss=3.212312 lr=6.79e-04
+step=1200 loss=3.172590 lr=6.55e-04
+step=1250 loss=3.114847 lr=6.29e-04
+eval step=1250 model_acc=0.2305 model_rank=14.69 ddt_acc=0.0000 ddt_rank=32.38
+step=1300 loss=2.870316 lr=6.04e-04
+step=1350 loss=2.950009 lr=5.78e-04
+step=1400 loss=2.598405 lr=5.52e-04
+step=1450 loss=2.425006 lr=5.26e-04
+step=1500 loss=2.510546 lr=5.00e-04
+eval step=1500 model_acc=0.2949 model_rank=9.98 ddt_acc=0.0000 ddt_rank=33.16
+step=1550 loss=2.317295 lr=4.74e-04
+step=1600 loss=2.381834 lr=4.48e-04
+step=1650 loss=2.241382 lr=4.22e-04
+step=1700 loss=2.158697 lr=3.96e-04
+step=1750 loss=2.142412 lr=3.71e-04
+eval step=1750 model_acc=0.3594 model_rank=8.97 ddt_acc=0.0000 ddt_rank=31.91
+step=1800 loss=2.291003 lr=3.45e-04
+step=1850 loss=2.230642 lr=3.21e-04
+step=1900 loss=2.111562 lr=2.97e-04
+step=1950 loss=2.128985 lr=2.73e-04
+step=2000 loss=1.992467 lr=2.50e-04
+eval step=2000 model_acc=0.3477 model_rank=8.31 ddt_acc=0.0000 ddt_rank=32.60
+step=2050 loss=1.997782 lr=2.28e-04
+step=2100 loss=1.980987 lr=2.06e-04
+step=2150 loss=2.000446 lr=1.85e-04
+step=2200 loss=2.034182 lr=1.65e-04
+step=2250 loss=1.986559 lr=1.46e-04
+eval step=2250 model_acc=0.3320 model_rank=10.10 ddt_acc=0.0000 ddt_rank=33.46
+step=2300 loss=1.916824 lr=1.28e-04
+step=2350 loss=1.864154 lr=1.11e-04
+step=2400 loss=1.862847 lr=9.55e-05
+step=2450 loss=1.868048 lr=8.07e-05
+step=2500 loss=1.945184 lr=6.70e-05
+eval step=2500 model_acc=0.3887 model_rank=8.33 ddt_acc=0.0000 ddt_rank=32.24
+step=2550 loss=1.960937 lr=5.45e-05
+step=2600 loss=2.031541 lr=4.32e-05
+step=2650 loss=1.830054 lr=3.32e-05
+step=2700 loss=1.839122 lr=2.45e-05
+step=2750 loss=1.856408 lr=1.70e-05
+eval step=2750 model_acc=0.3633 model_rank=9.73 ddt_acc=0.0000 ddt_rank=31.61
+step=2800 loss=1.926146 lr=1.09e-05
+step=2850 loss=1.931279 lr=6.16e-06
+step=2900 loss=1.866707 lr=2.74e-06
+step=2950 loss=1.918063 lr=6.85e-07
+step=3000 loss=1.820661 lr=0.00e+00
+eval step=3000 model_acc=0.3906 model_rank=9.19 ddt_acc=0.0000 ddt_rank=33.62

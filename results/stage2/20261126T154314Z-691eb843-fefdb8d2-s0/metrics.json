@@ -1,0 +1,18 @@
+{
+  "best": {
+    "elapsed_s": 344.6552675999701,
+    "mean_rank": 29.1875,
+    "pairs": 100000000.0,
+    "recovered": 0.0,
+    "rounds": 6.0,
+    "top1": 0.0
+  },
+  "final": {
+    "elapsed_s": 344.6552675999701,
+    "mean_rank": 29.1875,
+    "pairs": 100000000.0,
+    "recovered": 0.0,
+    "rounds": 6.0,
+    "top1": 0.0
+  }
+}
