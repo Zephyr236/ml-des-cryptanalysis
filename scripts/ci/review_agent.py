@@ -74,8 +74,10 @@ Research
 R1. Question and hypothesis: is the question well-posed and falsifiable?
     Does it confuse distinguishing with key recovery, or a toy key space
     with DES's 56-bit space?
-R2. Design: are train/val/test keys disjoint? Are baselines budget-matched
-    (random search, brute force, classical differential/linear)? Are seeds,
+R2. Design: are train/val/test keys disjoint? Is the target key ever an
+    input feature? Is the final number from a held-out test set, with no
+    tuning on it? Are baselines budget-matched (random search, brute force
+    at the same key size, classical differential/linear)? Are seeds,
     confidence intervals, controls and compute accounting adequate?
 R3. Results: does every claim follow from the attached metrics? Interpret
     negative results correctly. Name the analyses that are missing:
@@ -89,7 +91,8 @@ Code
 C1. Cryptographic correctness: DES tables, round count, key schedule,
     final swap, round-reduced semantics, verification against a real cipher.
 C2. Leakage and splits: could the reported metric be memorisation or a
-    confound?
+    confound? Is the target key excluded from inputs, and is the test set
+    truly held out?
 C3. Training methodology: loss matches the objective (ranking vs
     classification), class balance, evaluation protocol, early stopping.
 C4. Reproducibility: manifest present, code_sha, config hash, seeds.
@@ -831,7 +834,7 @@ def main() -> int:
         except Exception as exc:  # noqa: BLE001 - issue filing is best effort
             print(f"could not file research report: {exc}", file=sys.stderr)
 
-    if research_content and research_diff:
+    if analysis and research_content and research_diff:
         recommendations = [
             rec
             for rec in _dict_items(review.get("recommendations"))
