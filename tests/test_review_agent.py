@@ -244,11 +244,11 @@ def test_main_without_credentials_posts_skip(monkeypatch, tmp_path):
     assert "skipped" in posted[-1].lower()
 
 
-def test_main_disables_claude_on_pull_request_target(monkeypatch, tmp_path):
+def test_main_disables_claude_without_explicit_opt_in(monkeypatch, tmp_path):
     monkeypatch.delenv("OPENCODE_ZEN_API_KEY", raising=False)
     monkeypatch.delenv("OPENCODE_API_KEY", raising=False)
+    monkeypatch.delenv("ALLOW_TOOL_TRANSPORT", raising=False)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic")
-    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request_target")
     _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
     monkeypatch.setattr(sys, "argv", ["review_agent.py"])
     posted = []
@@ -256,15 +256,35 @@ def test_main_disables_claude_on_pull_request_target(monkeypatch, tmp_path):
         review_agent, "post_comment", lambda repo, number, token, body: posted.append(body)
     )
     assert review_agent.main() == 0
-    assert "disabled" in posted[-1].lower()
-    assert "OPENCODE_ZEN_API_KEY" in posted[-1]
+    assert "skipped" in posted[-1].lower()
+    assert "ALLOW_TOOL_TRANSPORT" in posted[-1]
+
+
+def test_main_allows_claude_with_explicit_opt_in(monkeypatch, tmp_path):
+    monkeypatch.delenv("OPENCODE_ZEN_API_KEY", raising=False)
+    monkeypatch.delenv("OPENCODE_API_KEY", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic")
+    monkeypatch.setenv("ALLOW_TOOL_TRANSPORT", "1")
+    _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
+    monkeypatch.setattr(sys, "argv", ["review_agent.py"])
+
+    async def fake_agent(prompt, model):
+        return '{"summary":"ok","verdict":"sound","findings":[]}'
+
+    monkeypatch.setattr(review_agent, "run_agent", fake_agent)
+    posted = []
+    monkeypatch.setattr(
+        review_agent, "post_comment", lambda repo, number, token, body: posted.append(body)
+    )
+    assert review_agent.main() == 0
+    assert "Claude Agent SDK" in posted[-1]
 
 
 def test_main_dry_run_disables_claude_without_posting(monkeypatch, tmp_path):
     monkeypatch.delenv("OPENCODE_ZEN_API_KEY", raising=False)
     monkeypatch.delenv("OPENCODE_API_KEY", raising=False)
+    monkeypatch.delenv("ALLOW_TOOL_TRANSPORT", raising=False)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic")
-    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request_target")
     _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
     monkeypatch.setattr(sys, "argv", ["review_agent.py", "--dry-run"])
     posted = []

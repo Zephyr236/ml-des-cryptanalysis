@@ -43,12 +43,12 @@ as issues.
    OpenCode call posts a non-blocking notice; it does not silently retry
    through Claude.
 
-   The tool-enabled Claude transport is **disabled for
-   `pull_request_target` events**. The diff is untrusted PR content, and
-   Read/Grep/Glob could be prompt-injected into reading files outside the
-   repository and repeating them in a public comment. PR reviews run on
-   the tool-less OpenCode transport; Claude remains available for
-   trusted dispatches.
+   The tool-enabled Claude transport is **disabled unless
+   `ALLOW_TOOL_TRANSPORT=1`** is explicitly set. The diff is untrusted PR
+   content, and Read/Grep/Glob could be prompt-injected into reading files
+   outside the repository and repeating them in a public comment. CI does
+   not set the opt-in; PR reviews run on the tool-less OpenCode
+   transport. The opt-in exists only for a trusted, human-run dispatch.
 3. **It can only comment and open issues.** The job is
    `continue-on-error: true`, the script always exits 0, and the check
    is deliberately absent from branch protection. This mirrors the
@@ -86,7 +86,9 @@ as issues.
 - The repository must hold at least one model credential as an Actions
   secret (`OPENCODE_ZEN_API_KEY`, `ANTHROPIC_API_KEY`, or
   `CLAUDE_CODE_OAUTH_TOKEN`). The key is never exposed to the agent's
-  tools; only the transport process reads it.
+  tools; only the transport process reads it. With only Claude
+  credentials and no tool opt-in, CI posts a skip notice rather than
+  running a tool-enabled agent on PR content.
 - The OpenCode transport cannot read files outside the prompt, so a
   review of a very large diff sees a truncated view. The deterministic
   gates remain the authority for anything the prompt cannot show.

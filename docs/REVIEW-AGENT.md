@@ -19,17 +19,19 @@ posts a non-blocking notice.
 
 The workflow uses `pull_request_target` and checks out the **base**
 commit. The PR head is fetched only to build a diff with `git diff`; no
-file from the PR is executed. This keeps the API key out of reach of
-PR-controlled code. The base URL must be `https://opencode.ai/...` unless
+file from the PR is executed. This keeps the key out of PR-controlled
+code execution, but the model still reads untrusted diff text; the
+review is advisory, not an authority. The base URL must be `https://opencode.ai/...` unless
 `OPENCODE_ALLOW_CUSTOM_BASE_URL=1` opts into a proxy, and cross-origin
 redirects are refused so the bearer token is never forwarded.
 
-The tool-enabled Claude transport is **disabled on untrusted events**
-(an allowlist: local runs and `workflow_dispatch` only): Read/Grep/Glob
-plus an untrusted diff would let a prompt injection read files outside
-the repository and repeat them in a comment. PR reviews use the
-tool-less OpenCode transport. On an untrusted event with only Claude
-credentials, a `--dry-run` exits without posting.
+The tool-enabled Claude transport is **disabled unless
+`ALLOW_TOOL_TRANSPORT=1`** is set for a trusted run. CI does not set it:
+Read/Grep/Glob plus an untrusted diff would let a prompt injection read
+files outside the repository and repeat them in a comment. PR reviews use
+the tool-less OpenCode transport. Without the opt-in, a run with only
+Claude credentials posts a skip notice; a `--dry-run` exits without
+posting.
 
 The tool-less transport cannot read files, but injected diff text can
 still shape the wording of the public comment. Treat every review as
@@ -48,6 +50,7 @@ result.
 | `OPENCODE_MODEL` | `deepseek-v4.1-flash` | model id |
 | `OPENCODE_MAX_TOKENS` | `64000` | output budget; reasoning consumes most of it |
 | `REVIEW_MODEL` | `claude-sonnet-5-5` | Claude transport model |
+| `ALLOW_TOOL_TRANSPORT` | unset | set to `1` to permit Read/Grep/Glob on a trusted run |
 
 Set the secret with `gh secret set OPENCODE_ZEN_API_KEY -R <owner>/<repo>`.
 Never commit the key.
@@ -55,9 +58,10 @@ Never commit the key.
 ## Local dry-run
 
 ```bash
+read -rs OPENCODE_ZEN_API_KEY && export OPENCODE_ZEN_API_KEY
 GITHUB_REPOSITORY=owner/repo GITHUB_TOKEN=dummy \
 GITHUB_EVENT_PATH=/tmp/event.json PR_DIFF_PATH=/tmp/pr.diff \
-OPENCODE_ZEN_API_KEY=... python scripts/ci/review_agent.py --dry-run
+python scripts/ci/review_agent.py --dry-run
 ```
 
 `/tmp/event.json` needs `pull_request.number`; `--dry-run` prints the

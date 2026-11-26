@@ -195,10 +195,11 @@ results/<stage>/<run_id>/
 - 否则 `ANTHROPIC_API_KEY` / `CLAUDE_CODE_OAUTH_TOKEN` 存在 → **Claude Agent SDK**，
   只读工具 `Read/Grep/Glob`。
 - 两者都没有 → 在 PR 里贴 skip 通知并成功退出，绝不失败 CI。
-- **`pull_request_target` 事件禁用带工具的 Claude 后端**：diff 是不可信的 PR 内容，
-  Read/Grep/Glob 可能被提示注入用来读取仓库外文件并写进公开评论。PR 评审只用无工具
-  的 OpenCode 后端；Claude 后端仅用于可信的 dispatch。manifest 指标是"主张"而不是
-  事实，由 `results-gate` 独立校验 schema、`code_sha`、config hash 和干净工作树。
+- **除非显式设置 `ALLOW_TOOL_TRANSPORT=1`，CI 禁用带工具的 Claude 后端**：diff 是
+  不可信的 PR 内容，Read/Grep/Glob 可能被提示注入用来读取仓库外文件并写进公开评论。
+  PR 评审只用无工具的 OpenCode 后端；opt-in 仅用于人工确认可信的 dispatch。manifest
+  指标是"主张"而不是事实，由 `results-gate` 独立校验 schema、`code_sha`、config hash
+  和干净工作树。
 
 ---
 

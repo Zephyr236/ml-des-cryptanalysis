@@ -451,27 +451,24 @@ def main() -> int:
 
     backend_kind = select_backend(opencode_key, anthropic_key, oauth_token)
 
-    # The Claude transport has Read/Grep/Glob. On pull_request_target the
-    # diff is untrusted PR content, and a prompt injection could ask the
-    # agent to read files outside the repository and repeat them in a
-    # comment. Use an allowlist: tools are only available for local runs
-    # (no event name) and explicitly trusted dispatches.
-    tool_trusted_events = {"", "workflow_dispatch"}
-    event_name = os.environ.get("GITHUB_EVENT_NAME", "")
-    if backend_kind == "claude" and event_name not in tool_trusted_events:
+    # The Claude transport has Read/Grep/Glob. The diff is untrusted PR
+    # content, and a prompt injection could ask the agent to read files
+    # outside the repository and repeat them in a comment. It is therefore
+    # disabled unless a human explicitly opts in for a trusted run.
+    if backend_kind == "claude" and os.environ.get("ALLOW_TOOL_TRANSPORT") != "1":
         if not dry_run:
             post_comment(
                 repo,
                 number,
                 token,
                 "## Automated review (advisory)\n\n"
-                "Review agent skipped: the tool-enabled Claude transport is "
-                "disabled for `pull_request_target` because the diff is "
-                "untrusted. Configure `OPENCODE_ZEN_API_KEY` (tool-less "
-                "transport) or review a trusted event.\n\n"
+                "Review agent skipped: the tool-enabled Claude transport "
+                "requires `ALLOW_TOOL_TRANSPORT=1` for a trusted run. PR "
+                "reviews use the tool-less OpenCode transport; configure "
+                "`OPENCODE_ZEN_API_KEY`.\n\n"
                 "<sub>Non-blocking by design (ADR-0003).</sub>",
             )
-        print("review agent: Claude transport disabled for pull_request_target")
+        print("review agent: Claude transport disabled without explicit opt-in")
         return 0
 
     if backend_kind == "none":
