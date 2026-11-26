@@ -31,11 +31,17 @@ Read/Grep/Glob plus an untrusted diff would let a prompt injection read
 files outside the repository and repeat them in a comment. PR reviews use
 the tool-less OpenCode transport. Without the opt-in, a run with only
 Claude credentials posts a skip notice; a `--dry-run` exits without
-posting.
+posting (it prints a skip line and exits 0).
 
 The tool-less transport cannot read files, but injected diff text can
 still shape the wording of the public comment. Treat every review as
 advisory and check its claims against the deterministic gates.
+
+Because `pull_request_target` checks out the base branch, a PR that
+changes this guard is reviewed by the **old** base version. The new guard
+takes effect only after that PR merges; verify it with a follow-up PR or
+a trusted dispatch. Do not cite the introducing PR as an end-to-end test
+of the guard.
 
 Manifest metrics are claims, not verified facts. The `results-gate`
 independently checks the manifest schema, `code_sha`, config hash and a

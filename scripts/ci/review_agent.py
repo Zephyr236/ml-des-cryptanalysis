@@ -454,8 +454,11 @@ def main() -> int:
     # The Claude transport has Read/Grep/Glob. The diff is untrusted PR
     # content, and a prompt injection could ask the agent to read files
     # outside the repository and repeat them in a comment. It is therefore
-    # disabled unless a human explicitly opts in for a trusted run.
-    if backend_kind == "claude" and os.environ.get("ALLOW_TOOL_TRANSPORT") != "1":
+    # disabled unless a human opts in *and* the event is a trusted one.
+    event_name = os.environ.get("GITHUB_EVENT_NAME", "")
+    trusted_event = event_name in {"", "workflow_dispatch"}
+    tools_opted_in = os.environ.get("ALLOW_TOOL_TRANSPORT") == "1"
+    if backend_kind == "claude" and not (trusted_event and tools_opted_in):
         if not dry_run:
             post_comment(
                 repo,
@@ -463,12 +466,13 @@ def main() -> int:
                 token,
                 "## Automated review (advisory)\n\n"
                 "Review agent skipped: the tool-enabled Claude transport "
-                "requires `ALLOW_TOOL_TRANSPORT=1` for a trusted run. PR "
-                "reviews use the tool-less OpenCode transport; configure "
+                "requires `ALLOW_TOOL_TRANSPORT=1` on a trusted event "
+                "(local or `workflow_dispatch`). PR reviews use the "
+                "tool-less OpenCode transport; configure "
                 "`OPENCODE_ZEN_API_KEY`.\n\n"
                 "<sub>Non-blocking by design (ADR-0003).</sub>",
             )
-        print("review agent: Claude transport disabled without explicit opt-in")
+        print("review agent: Claude transport disabled (untrusted event or no opt-in)")
         return 0
 
     if backend_kind == "none":

@@ -291,3 +291,19 @@ def test_main_dry_run_disables_claude_without_posting(monkeypatch, tmp_path):
     monkeypatch.setattr(review_agent, "post_comment", lambda *a, **k: posted.append(a))
     assert review_agent.main() == 0
     assert posted == []
+
+
+def test_main_disables_claude_even_with_opt_in_on_untrusted_event(monkeypatch, tmp_path):
+    monkeypatch.delenv("OPENCODE_ZEN_API_KEY", raising=False)
+    monkeypatch.delenv("OPENCODE_API_KEY", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic")
+    monkeypatch.setenv("ALLOW_TOOL_TRANSPORT", "1")
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request_target")
+    _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
+    monkeypatch.setattr(sys, "argv", ["review_agent.py"])
+    posted = []
+    monkeypatch.setattr(
+        review_agent, "post_comment", lambda repo, number, token, body: posted.append(body)
+    )
+    assert review_agent.main() == 0
+    assert "trusted event" in posted[-1]
