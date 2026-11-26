@@ -242,3 +242,85 @@ def test_main_without_credentials_posts_skip(monkeypatch, tmp_path):
     )
     assert review_agent.main() == 0
     assert "skipped" in posted[-1].lower()
+
+
+def test_main_disables_claude_without_explicit_opt_in(monkeypatch, tmp_path):
+    monkeypatch.delenv("OPENCODE_ZEN_API_KEY", raising=False)
+    monkeypatch.delenv("OPENCODE_API_KEY", raising=False)
+    monkeypatch.delenv("ALLOW_TOOL_TRANSPORT", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic")
+    _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
+    monkeypatch.setattr(sys, "argv", ["review_agent.py"])
+    posted = []
+    monkeypatch.setattr(
+        review_agent, "post_comment", lambda repo, number, token, body: posted.append(body)
+    )
+    assert review_agent.main() == 0
+    assert "skipped" in posted[-1].lower()
+    assert "ALLOW_TOOL_TRANSPORT" in posted[-1]
+
+
+def test_main_allows_claude_with_explicit_opt_in(monkeypatch, tmp_path):
+    monkeypatch.delenv("OPENCODE_ZEN_API_KEY", raising=False)
+    monkeypatch.delenv("OPENCODE_API_KEY", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic")
+    monkeypatch.setenv("ALLOW_TOOL_TRANSPORT", "1")
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "workflow_dispatch")
+    _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
+    monkeypatch.setattr(sys, "argv", ["review_agent.py"])
+
+    async def fake_agent(prompt, model):
+        return '{"summary":"ok","verdict":"sound","findings":[]}'
+
+    monkeypatch.setattr(review_agent, "run_agent", fake_agent)
+    posted = []
+    monkeypatch.setattr(
+        review_agent, "post_comment", lambda repo, number, token, body: posted.append(body)
+    )
+    assert review_agent.main() == 0
+    assert "Claude Agent SDK" in posted[-1]
+
+
+def test_main_dry_run_disables_claude_without_posting(monkeypatch, tmp_path, capsys):
+    monkeypatch.delenv("OPENCODE_ZEN_API_KEY", raising=False)
+    monkeypatch.delenv("OPENCODE_API_KEY", raising=False)
+    monkeypatch.delenv("ALLOW_TOOL_TRANSPORT", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic")
+    _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
+    monkeypatch.setattr(sys, "argv", ["review_agent.py", "--dry-run"])
+    posted = []
+    monkeypatch.setattr(review_agent, "post_comment", lambda *a, **k: posted.append(a))
+    assert review_agent.main() == 0
+    assert posted == []
+
+
+def test_main_disables_claude_even_with_opt_in_on_untrusted_event(monkeypatch, tmp_path):
+    monkeypatch.delenv("OPENCODE_ZEN_API_KEY", raising=False)
+    monkeypatch.delenv("OPENCODE_API_KEY", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic")
+    monkeypatch.setenv("ALLOW_TOOL_TRANSPORT", "1")
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request_target")
+    _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
+    monkeypatch.setattr(sys, "argv", ["review_agent.py"])
+    posted = []
+    monkeypatch.setattr(
+        review_agent, "post_comment", lambda repo, number, token, body: posted.append(body)
+    )
+    assert review_agent.main() == 0
+    assert "workflow_dispatch" in posted[-1]
+
+
+def test_main_disables_claude_with_opt_in_and_empty_event(monkeypatch, tmp_path):
+    monkeypatch.delenv("OPENCODE_ZEN_API_KEY", raising=False)
+    monkeypatch.delenv("OPENCODE_API_KEY", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic")
+    monkeypatch.setenv("ALLOW_TOOL_TRANSPORT", "1")
+    monkeypatch.delenv("GITHUB_EVENT_NAME", raising=False)
+    _set_github_env(monkeypatch, tmp_path, _event(tmp_path))
+    monkeypatch.setattr(sys, "argv", ["review_agent.py"])
+    posted = []
+    monkeypatch.setattr(
+        review_agent, "post_comment", lambda repo, number, token, body: posted.append(body)
+    )
+    assert review_agent.main() == 0
+    assert "workflow_dispatch" in posted[-1]

@@ -98,6 +98,7 @@ produced on the GPU host.
 - Rules for humans and agents: [`AGENTS.md`](AGENTS.md)
 - Decisions: [`docs/adr/`](docs/adr)
 - CI gates: [`.github/workflows/`](.github/workflows)
+- Review agent: [`docs/REVIEW-AGENT.md`](docs/REVIEW-AGENT.md)
 - Ship checklist: [`docs/SHIP-CHECKLIST.md`](docs/SHIP-CHECKLIST.md)
 
 Required checks: `ci`, `adr-guard`, `adr-numbers`, `link-check`,
