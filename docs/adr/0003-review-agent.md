@@ -35,8 +35,13 @@ as issues.
      from `repo#PR`; requests identify themselves as
      `ml-des-review/1.0`. This transport has no repository tools, so the
      prompt carries the diff (truncated at 90k characters) and the
-     manifest summaries.
-   The OpenCode transport is preferred when both are configured.
+     manifest summaries. The output budget is 64k tokens
+     (`OPENCODE_MAX_TOKENS`): a 23k-character diff used ~42k characters
+     of reasoning before the JSON.
+   The transport is selected by credentials, not by runtime fallback:
+   OpenCode is used when its key is present, otherwise Claude. A failed
+   OpenCode call posts a non-blocking notice; it does not silently retry
+   through Claude.
 3. **It can only comment and open issues.** The job is
    `continue-on-error: true`, the script always exits 0, and the check
    is deliberately absent from branch protection. This mirrors the

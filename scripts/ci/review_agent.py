@@ -268,10 +268,12 @@ def validate_base_url(url: str) -> str:
     exfiltrate the secret. Proxies must opt in explicitly.
     """
     parsed = urllib.parse.urlparse(url)
-    if parsed.scheme != "https" or parsed.hostname != "opencode.ai":
+    if parsed.scheme != "https":
+        raise RuntimeError("OPENCODE_BASE_URL must use https, even for a proxy")
+    if parsed.hostname != "opencode.ai":
         if os.environ.get("OPENCODE_ALLOW_CUSTOM_BASE_URL") != "1":
             raise RuntimeError(
-                "OPENCODE_BASE_URL must be an https://opencode.ai/... URL; "
+                "OPENCODE_BASE_URL must point at https://opencode.ai/...; "
                 "set OPENCODE_ALLOW_CUSTOM_BASE_URL=1 to use a proxy"
             )
     return url.rstrip("/")
@@ -326,20 +328,32 @@ def call_opencode(prompt: str, model: str, session: str, api_key: str) -> str:
         if not choices:
             raise RuntimeError(f"no choices in response: {data}")
         choice = choices[0]
-        content = choice.get("message", {}).get("content", "")
-        if isinstance(content, list):  # some providers return content parts
-            content = "".join(part.get("text", "") for part in content if isinstance(part, dict))
-        if isinstance(content, str) and content.strip():
-            return content
         finish = choice.get("finish_reason")
+        # A truncated response can still contain a syntactically valid
+        # prefix (or a full JSON object followed by prose); never return
+        # it as a review.  Check the reason before the content.
         if finish == "length":
             raise RuntimeError(
                 f"review truncated by the token budget (finish_reason=length, "
                 f"max_tokens={OPENCODE_MAX_TOKENS}); raise OPENCODE_MAX_TOKENS"
             )
+        content = choice.get("message", {}).get("content", "")
+        if isinstance(content, list):  # some providers return content parts
+            content = "".join(part.get("text", "") for part in content if isinstance(part, dict))
+        if isinstance(content, str) and content.strip():
+            return content
         if attempt < 2:
             time.sleep(2**attempt)
     raise RuntimeError(f"empty review content (finish_reason={finish})")
+
+
+def select_backend(opencode_key: str, anthropic_key: str, oauth_token: str) -> str:
+    """Choose the transport from credentials; no automatic fallback on error."""
+    if opencode_key:
+        return "opencode"
+    if anthropic_key or oauth_token:
+        return "claude"
+    return "none"
 
 
 def build_prompt(diff: str, pr: dict | None = None) -> str:
@@ -406,19 +420,21 @@ def main() -> int:
         print("review agent: not a pull_request event; skipping")
         return 0
 
-    if not (opencode_key or anthropic_key or oauth_token):
-        post_comment(
-            repo,
-            number,
-            token,
-            "## Automated review (advisory)\n\n"
-            "Review agent skipped: none of `OPENCODE_ZEN_API_KEY`, "
-            "`ANTHROPIC_API_KEY` or `CLAUDE_CODE_OAUTH_TOKEN` is configured "
-            "for this repository. Add one as an Actions secret to enable the "
-            "methodology review.\n\n"
-            "<sub>Non-blocking by design (ADR-0003).</sub>",
-        )
-        print("review agent: no model credentials; posted notice")
+    backend_kind = select_backend(opencode_key, anthropic_key, oauth_token)
+    if backend_kind == "none":
+        if not dry_run:
+            post_comment(
+                repo,
+                number,
+                token,
+                "## Automated review (advisory)\n\n"
+                "Review agent skipped: none of `OPENCODE_ZEN_API_KEY`, "
+                "`ANTHROPIC_API_KEY` or `CLAUDE_CODE_OAUTH_TOKEN` is configured "
+                "for this repository. Add one as an Actions secret to enable the "
+                "methodology review.\n\n"
+                "<sub>Non-blocking by design (ADR-0003).</sub>",
+            )
+        print("review agent: no model credentials; skipped")
         return 0
 
     diff = diff_path.read_text(encoding="utf-8", errors="ignore") if diff_path.exists() else ""
@@ -430,7 +446,7 @@ def main() -> int:
     }
     prompt = build_prompt(diff, pr_info)
     try:
-        if opencode_key:
+        if backend_kind == "opencode":
             backend = f"OpenCode Zen Go / {OPENCODE_MODEL}"
             session = str(uuid.uuid5(uuid.NAMESPACE_URL, f"{repo}#{number}"))
             text = call_opencode(prompt, OPENCODE_MODEL, session, opencode_key)

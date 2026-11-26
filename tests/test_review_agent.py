@@ -42,6 +42,8 @@ def test_validate_base_url_requires_opencode_host(monkeypatch):
         review_agent.validate_base_url("https://evil.example/v1")
     monkeypatch.setenv("OPENCODE_ALLOW_CUSTOM_BASE_URL", "1")
     assert review_agent.validate_base_url("https://proxy.internal/v1")
+    with pytest.raises(RuntimeError):
+        review_agent.validate_base_url("http://proxy.internal/v1")
 
 
 def test_call_opencode_headers_payload_and_parse(monkeypatch):
@@ -82,6 +84,33 @@ def test_call_opencode_retries_transient_http_error(monkeypatch):
     text = review_agent.call_opencode("x", "m", "s", "k")
     assert "ok" in text
     assert calls["count"] == 2
+
+
+def test_call_opencode_rejects_truncated_nonempty_content(monkeypatch):
+    def fake_urlopen(request, timeout=0):
+        return FakeResponse(
+            {
+                "choices": [
+                    {
+                        "finish_reason": "length",
+                        "message": {"role": "assistant", "content": '{"summary": "partial"'},
+                    }
+                ]
+            }
+        )
+
+    monkeypatch.setattr(review_agent.urllib.request, "urlopen", fake_urlopen)
+    with pytest.raises(RuntimeError, match="truncated"):
+        review_agent.call_opencode("x", "m", "s", "k")
+
+
+def test_select_backend_by_credentials():
+    assert review_agent.select_backend("opencode", "", "") == "opencode"
+    assert review_agent.select_backend("", "anthropic", "") == "claude"
+    assert review_agent.select_backend("", "", "oauth") == "claude"
+    assert review_agent.select_backend("", "", "") == "none"
+    # OpenCode wins when both are present; there is no runtime fallback.
+    assert review_agent.select_backend("opencode", "anthropic", "oauth") == "opencode"
 
 
 def test_build_prompt_includes_metrics_and_pr_metadata(monkeypatch, tmp_path):
