@@ -1,0 +1,12 @@
+{"step": 250, "model_acc": 0.021484375, "model_top5": 0.083984375, "model_mean_rank": 33.37109375, "ddt_acc": 0.0, "ddt_top5": 0.04296875, "ddt_mean_rank": 33.302734375, "train_loss": 4.225928783416748}
+{"step": 500, "model_acc": 0.015625, "model_top5": 0.080078125, "model_mean_rank": 30.453125, "ddt_acc": 0.0, "ddt_top5": 0.05859375, "ddt_mean_rank": 32.1796875, "train_loss": 4.182341575622559}
+{"step": 750, "model_acc": 0.046875, "model_top5": 0.12109375, "model_mean_rank": 29.91015625, "ddt_acc": 0.0, "ddt_top5": 0.05859375, "ddt_mean_rank": 31.57421875, "train_loss": 4.199979782104492}
+{"step": 1000, "model_acc": 0.130859375, "model_top5": 0.34375, "model_mean_rank": 22.5390625, "ddt_acc": 0.0, "ddt_top5": 0.05078125, "ddt_mean_rank": 32.734375, "train_loss": 3.448143482208252}
+{"step": 1250, "model_acc": 0.23046875, "model_top5": 0.486328125, "model_mean_rank": 14.69140625, "ddt_acc": 0.0, "ddt_top5": 0.05078125, "ddt_mean_rank": 32.384765625, "train_loss": 3.114847183227539}
+{"step": 1500, "model_acc": 0.294921875, "model_top5": 0.716796875, "model_mean_rank": 9.978515625, "ddt_acc": 0.0, "ddt_top5": 0.041015625, "ddt_mean_rank": 33.158203125, "train_loss": 2.5105457305908203}
+{"step": 1750, "model_acc": 0.359375, "model_top5": 0.763671875, "model_mean_rank": 8.970703125, "ddt_acc": 0.0, "ddt_top5": 0.044921875, "ddt_mean_rank": 31.90625, "train_loss": 2.1424121856689453}
+{"step": 2000, "model_acc": 0.34765625, "model_top5": 0.77734375, "model_mean_rank": 8.30859375, "ddt_acc": 0.0, "ddt_top5": 0.04296875, "ddt_mean_rank": 32.595703125, "train_loss": 1.9924668073654175}
+{"step": 2250, "model_acc": 0.33203125, "model_top5": 0.7734375, "model_mean_rank": 10.09765625, "ddt_acc": 0.0, "ddt_top5": 0.029296875, "ddt_mean_rank": 33.455078125, "train_loss": 1.9865587949752808}
+{"step": 2500, "model_acc": 0.388671875, "model_top5": 0.771484375, "model_mean_rank": 8.330078125, "ddt_acc": 0.0, "ddt_top5": 0.052734375, "ddt_mean_rank": 32.240234375, "train_loss": 1.9451836347579956}
+{"step": 2750, "model_acc": 0.36328125, "model_top5": 0.755859375, "model_mean_rank": 9.728515625, "ddt_acc": 0.0, "ddt_top5": 0.044921875, "ddt_mean_rank": 31.607421875, "train_loss": 1.856407880783081}
+{"step": 3000, "model_acc": 0.390625, "model_top5": 0.765625, "model_mean_rank": 9.1875, "ddt_acc": 0.0, "ddt_top5": 0.037109375, "ddt_mean_rank": 33.6171875, "train_loss": 1.8206610679626465}

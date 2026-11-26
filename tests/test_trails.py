@@ -17,6 +17,7 @@ from des_ml.des import (
 from des_ml.des_torch import des_encrypt_states_torch, rand64
 from des_ml.theory.ddt import ddt_tables
 from des_ml.theory.trails import (
+    multi_bit_starts,
     reconstruct,
     sbox_input_differences,
     search,
@@ -96,7 +97,7 @@ def test_search_one_round_matches_ddt_maximum():
     for j, difference in enumerate(sbox_input_differences(right)):
         if difference:
             expected += math.log2(int(DDT[j, difference].max()) / 64.0)
-    _, best_active = search([(0, right)], 1, beam=50, branch=16, combos=64)
+    best_active = search([(0, right)], 1, beam=50, branch=16, combos=64).best_active
     assert 1 in best_active
     trail = reconstruct(best_active[1])
     assert trail.log2_probability == pytest.approx(expected)
@@ -104,7 +105,7 @@ def test_search_one_round_matches_ddt_maximum():
 
 
 def test_input_difference_roundtrip():
-    _, best_active = search(single_bit_starts(), 2, beam=200, branch=4, combos=12)
+    best_active = search(single_bit_starts(), 2, beam=200, branch=4, combos=12).best_active
     trail = reconstruct(best_active[2])
     state = permute(trail.input_difference, IP, 64)
     assert ((state >> 32) & MASK32, state & MASK32) == trail.start
@@ -126,3 +127,11 @@ def test_shuffled_ddt_control_preserves_rows():
     assert np.array_equal(control.sum(axis=2), ddt.sum(axis=2))
     assert not np.array_equal(control, ddt)
     assert np.array_equal(control, shuffled_ddt(7))
+
+
+def test_multi_bit_starts_include_single_bit_and_random():
+    singles = set(single_bit_starts())
+    starts = multi_bit_starts(seed=3, random_count=16)
+    assert singles.issubset(set(starts))
+    assert len(starts) > len(singles)
+    assert len(set(starts)) == len(starts)

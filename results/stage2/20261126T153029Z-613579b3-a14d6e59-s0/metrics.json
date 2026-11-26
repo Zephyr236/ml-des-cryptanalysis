@@ -1,0 +1,20 @@
+{
+  "best": {
+    "keys": 1.0,
+    "known_boxes": 8.0,
+    "pairs": 64.0,
+    "rounds": 2.0,
+    "success_rate": 0.0,
+    "successes": 0.0,
+    "top": 4.0
+  },
+  "final": {
+    "keys": 1.0,
+    "known_boxes": 8.0,
+    "pairs": 64.0,
+    "rounds": 2.0,
+    "success_rate": 0.0,
+    "successes": 0.0,
+    "top": 4.0
+  }
+}

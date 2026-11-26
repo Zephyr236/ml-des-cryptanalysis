@@ -1,0 +1,8 @@
+key: '0x133457799BBCDFF1'
+delta: '0x0000001010000000'
+rounds: 6
+pairs: 100000000
+batch: 65536
+filter_vector: 8,-1,19,48,8,4,2,-1
+top_k: 1
+full_boxes: 1,7

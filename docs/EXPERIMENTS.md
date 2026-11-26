@@ -147,6 +147,74 @@ that follows contains only results and docs.
 **G2:** KR-4 passes; VA-1 passes; CT-7 at chance; every success verified
 by re-encryption.
 
+## Stage 2 — AI chunk scorer pilot and 6-round attack
+
+### 2-round chunk scorer (SPADE-style)
+
+Run `20261126T150811Z-fa7d0232-c7d52488-s0`: 2-round CPA, 32 pairs/key,
+16 keys per batch, 3000 steps, per-S-box DDT-initialised residual.
+
+| Metric | Neural scorer | Exact DDT counter |
+|---|---|---|
+| chunk accuracy | 0.3906 | 0.0000 |
+| top-5 | 0.7656 | 0.0371 |
+| mean rank | 9.19 | 33.62 |
+
+Per-box diagnostics on held-out keys show boxes 0, 1, 2, 4, 6 and 7
+mostly at rank 1–2, while boxes 3 and 5 remain weak (ranks 12–64). A full
+2-round key recovery with this checkpoint is therefore not claimed; the
+result establishes that the learning pipeline is real at 2 rounds.
+
+### 6-round differential attack
+
+- Trail: 5-round full-active characteristic `ΔP=0x0000001010000000`,
+  `p=2^-25.268`, last-round input differences
+  `[8,1,19,48,8,4,2,32]`.
+- Baseline: 100M pairs, no filter — run
+  `20261126T154314Z-691eb843-fefdb8d2-s0`; true-chunk ranks
+  `[3,64,16,14.5,34,16,42,44]`, mean 29.19. Partial box-level signal,
+  no key recovery.
+- Full filtered attack: run
+  `20261126T161139Z-772dae9a-c55082ec-s0`; 323M chosen plaintext
+  pairs, exact right-pair filter on the trailing-round vector. Only
+  **4 pairs** passed, and the true-chunk DDT ranks were
+  `[51.5,63.5,9.5,56.5,30.5,40.5,4.5,21.5]` (mean 34.75): no key.
+  The earlier 323M run (same filter, different seed) also kept 4 pairs
+  and failed.
+- Partial filter (**diagnostic only; no manifest, not quantitative
+  evidence**): wildcard S-boxes 1 and 7, enumerate them fully, top-1
+  on the other six. 100M pairs, roughly 5k filtered pairs. The true
+  chunk ranks stayed near chance
+  `[51.5,46.5,14.5,56.5,28.5,27.5,10.5,22.5]`; the DDT score is diluted
+  by non-right pairs. The recovery process crashed after the scores were
+  written, so this run has no manifest; `scores.json` is retained as a
+  negative result.
+- Characteristic match: the DDT ranker scores wrong high-probability
+  output differences above true right pairs. The standard test instead
+  checks the trail's predicted `L5` difference after partially
+  decrypting the last round. Run
+  `20261126T165820Z-9d233012-7f919ef3-s0` (323M pairs, 4 filtered)
+  puts **every true chunk at rank 1.5** — a systematic two-candidate
+  tie. Top-2 over all eight S-boxes (256 round-key combinations, 48,896
+  key-schedule candidates) recovers the 56-bit effective key
+  `0x123456789ABCDEF0` (run
+  `20261126T171750Z-0b60a9d9-52394cf1-s0`, `recovered=1`). This is
+  parity-equivalent to the target `0x133457799BBCDFF1`: both give the
+  FIPS vector `0x85E813540F0AB405`, and the recovered key re-encrypts
+  the target's verification blocks.  The recovery used four fresh
+  random verification blocks; the key is unique up to the eight DES
+  parity bits.  Compute: 323M chosen pairs, 1116 s data generation,
+  48,896 candidate master keys (256 combinations × 256 completions),
+  one RTX 2060.  The top-2 protocol is fixed for the statistic, not chosen per key:
+  for a fixed S-box input difference `a`, candidates `k` and `k xor a`
+  swap the two S-box inputs and produce the same output difference, so
+  every true chunk has exactly one algebraic dual at rank 1.5.  Top-1
+  cannot succeed; top-2 plus the key schedule and re-encryption
+  resolves the dual.
+- Neural 6-round chunk-scorer and PairCNN distinguisher training did not
+  move above chance in early evaluations; this negative scaling result
+  is recorded in ADR-0010.
+
 ## Stage 3 — KPA vs CPA
 
 | ID | R | Model | Primary metric | Status |

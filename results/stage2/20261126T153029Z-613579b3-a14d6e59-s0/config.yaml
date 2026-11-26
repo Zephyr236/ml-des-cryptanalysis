@@ -1,0 +1,6 @@
+checkpoint: D:\research\ml-des\repo\results\stage2\20261126T150811Z-fa7d0232-c7d52488-s0\best.pt
+keys: 1
+pairs: 64
+top: 4
+known_boxes: 8
+rounds: 2

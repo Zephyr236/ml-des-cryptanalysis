@@ -1,0 +1,144 @@
+{
+  "box_accuracy": [
+    0.625,
+    0.625,
+    0.375,
+    0.0,
+    0.5,
+    0.0,
+    0.625,
+    0.25
+  ],
+  "trusted": [
+    0,
+    1,
+    6,
+    4,
+    2,
+    7,
+    3,
+    5
+  ],
+  "details": [
+    {
+      "key": "0xF2D2BB1DDEC586ED",
+      "success": false,
+      "candidates_tried": 0,
+      "ranks": [
+        1.0,
+        1.0,
+        2.0,
+        52.0,
+        2.0,
+        18.0,
+        2.0,
+        2.0
+      ]
+    },
+    {
+      "key": "0x6D8639642FFA6D36",
+      "success": false,
+      "candidates_tried": 0,
+      "ranks": [
+        1.0,
+        1.0,
+        1.0,
+        9.0,
+        1.0,
+        52.0,
+        2.0,
+        2.0
+      ]
+    },
+    {
+      "key": "0x3BDBD706B0A74BBD",
+      "success": false,
+      "candidates_tried": 0,
+      "ranks": [
+        2.0,
+        1.0,
+        2.0,
+        13.0,
+        1.0,
+        58.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "key": "0x36199F41177FFADA",
+      "success": false,
+      "candidates_tried": 0,
+      "ranks": [
+        2.0,
+        2.0,
+        1.0,
+        56.0,
+        1.0,
+        64.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "key": "0xACD420949C314004",
+      "success": false,
+      "candidates_tried": 0,
+      "ranks": [
+        1.0,
+        2.0,
+        2.0,
+        28.0,
+        1.0,
+        28.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "key": "0xB471BDF6A2ADA1B8",
+      "success": false,
+      "candidates_tried": 0,
+      "ranks": [
+        2.0,
+        2.0,
+        2.0,
+        23.0,
+        2.0,
+        21.0,
+        1.0,
+        2.0
+      ]
+    },
+    {
+      "key": "0x92A2596242AD1DFE",
+      "success": false,
+      "candidates_tried": 0,
+      "ranks": [
+        2.0,
+        1.0,
+        1.0,
+        38.0,
+        1.0,
+        44.0,
+        1.0,
+        2.0
+      ]
+    },
+    {
+      "key": "0x11686195AFFF63FD",
+      "success": false,
+      "candidates_tried": 0,
+      "ranks": [
+        2.0,
+        1.0,
+        2.0,
+        12.0,
+        2.0,
+        63.0,
+        1.0,
+        1.0
+      ]
+    }
+  ]
+}

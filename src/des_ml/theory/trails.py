@@ -15,6 +15,7 @@ with every trail.  See ADR-0009.
 from __future__ import annotations
 
 import math
+import random
 from dataclasses import dataclass
 
 import numpy as np
@@ -25,9 +26,11 @@ from .ddt import ddt_tables
 __all__ = [
     "TrailStep",
     "Trail",
+    "SearchResult",
     "search",
     "reconstruct",
     "single_bit_starts",
+    "multi_bit_starts",
     "sbox_input_differences",
     "expand_node",
     "shuffled_ddt",
@@ -67,6 +70,15 @@ class _Node:
     right: int
     parent: _Node | None
     step: TrailStep | None
+
+
+@dataclass
+class SearchResult:
+    best: dict[int, _Node]
+    best_active: dict[int, _Node]
+    best_full_active: dict[int, _Node]
+    best_zero_right: dict[int, _Node]
+    best_zero_right_full: dict[int, _Node]
 
 
 def sbox_input_differences(right: int) -> tuple[int, ...]:
@@ -162,19 +174,21 @@ def search(
     branch: int = 4,
     combos: int = 12,
     ddt=None,
-) -> tuple[dict[int, _Node], dict[int, _Node]]:
-    """Return ``(best, best_active)`` per round.
+) -> SearchResult:
+    """Return the best trails found per round.
 
-    ``best`` may be a trivial trail with no active S-boxes (one round of
-    deterministic Feistel propagation); ``best_active`` requires at least
-    one active S-box and is the trail used for key-recovery work.
+    ``best`` may be trivial; ``best_active`` requires an active S-box;
+    ``best_full_active`` activates all eight S-boxes of the next round.
+    ``best_zero_right`` ends with ``R_r = 0``, so one more round is
+    deterministic; ``best_zero_right_full`` additionally makes ``L_r``
+    activate all eight S-boxes, giving a 5-round characteristic with the
+    same probability as the 4-round trail for a 6-round attack.
     """
     if not start_states:
         raise ValueError("at least one start state is required")
     ddt = ddt_tables() if ddt is None else ddt
     nodes = [_Node(0.0, left & MASK32, right & MASK32, None, None) for left, right in start_states]
-    best: dict[int, _Node] = {}
-    best_active: dict[int, _Node] = {}
+    result = SearchResult({}, {}, {}, {}, {})
     for round_index in range(1, rounds + 1):
         candidates: dict[tuple[int, int], _Node] = {}
         for node in nodes:
@@ -187,12 +201,19 @@ def search(
         nodes = sorted(candidates.values(), key=lambda node: node.log2p, reverse=True)[:beam]
         if not nodes:
             break
-        best[round_index] = nodes[0]
+        result.best[round_index] = nodes[0]
         for node in nodes:
-            if _has_active_step(node):
-                best_active[round_index] = node
-                break
-    return best, best_active
+            if round_index not in result.best_active and _has_active_step(node):
+                result.best_active[round_index] = node
+            if round_index not in result.best_full_active and all(
+                sbox_input_differences(node.right)
+            ):
+                result.best_full_active[round_index] = node
+            if round_index not in result.best_zero_right and node.right == 0 and node.left:
+                result.best_zero_right[round_index] = node
+                if all(sbox_input_differences(node.left)):
+                    result.best_zero_right_full[round_index] = node
+    return result
 
 
 def reconstruct(node: _Node) -> Trail:
@@ -217,3 +238,17 @@ def single_bit_starts() -> list[tuple[int, int]]:
         states.append((0, 1 << bit))
         states.append((1 << bit, 0))
     return states
+
+
+def multi_bit_starts(seed: int = 0, random_count: int = 256) -> list[tuple[int, int]]:
+    """Single-bit starts plus all two-bit and random 32-bit differences."""
+    states = set(single_bit_starts())
+    for first in range(32):
+        for second in range(first + 1, 32):
+            mask = (1 << first) | (1 << second)
+            states.add((0, mask))
+            states.add((mask, 0))
+    rng = random.Random(seed)
+    for _ in range(random_count):
+        states.add((rng.getrandbits(32), rng.getrandbits(32)))
+    return sorted(states)

@@ -1,0 +1,55 @@
+{
+  "artifacts": [
+    "best.pt",
+    "config.yaml",
+    "metrics.json",
+    "metrics.jsonl",
+    "train.log"
+  ],
+  "code_sha": "fa7d02323dd48370d68c9edbd2224ea71ff66156",
+  "command": "python -m des_ml.train.train_chunk_scorer --config configs\\six_round\\chunk-scorer-des2.yaml --out results/stage2",
+  "config_path": "configs\\six_round\\chunk-scorer-des2.yaml",
+  "config_sha256": "c7d524882faf3df1cdf8ba2d759d879b6fc0f4101eda8e2b78ad470defccbc77",
+  "created_at": "2026-11-26T15:08:11Z",
+  "environment": {
+    "cuda": "12.4",
+    "cuda_available": true,
+    "gpu": "NVIDIA GeForce RTX 2060",
+    "machine": "AMD64",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.16",
+    "torch": "2.6.0+cu124"
+  },
+  "git_dirty": false,
+  "metrics": {
+    "best": {
+      "ddt_acc": 0.0,
+      "ddt_mean_rank": 33.6171875,
+      "ddt_top5": 0.05859375,
+      "model_acc": 0.390625,
+      "model_mean_rank": 33.37109375,
+      "model_top5": 0.77734375,
+      "train_loss": 4.225928783416748
+    },
+    "final": {
+      "best_model_acc": 0.390625,
+      "ddt_acc": 0.0,
+      "ddt_mean_rank": 33.6171875,
+      "ddt_top5": 0.037109375,
+      "model_acc": 0.390625,
+      "model_mean_rank": 9.1875,
+      "model_top5": 0.765625,
+      "train_loss": 1.8206610679626465
+    }
+  },
+  "run_id": "20261126T150811Z-fa7d0232-c7d52488-s0",
+  "schema_version": 1,
+  "seed": 0,
+  "status": "completed",
+  "tags": {
+    "kind": "chunk-scorer",
+    "mode": "cpa",
+    "rounds": 2,
+    "stage": "stage2"
+  }
+}

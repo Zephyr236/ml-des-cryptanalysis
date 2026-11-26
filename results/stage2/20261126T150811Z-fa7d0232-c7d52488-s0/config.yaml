@@ -1,0 +1,19 @@
+run_name: chunk-scorer-des2
+rounds: 2
+mode: cpa
+delta: 8796093022208
+model:
+  hidden: 256
+  dropout: 0.1
+train:
+  keys_per_batch: 16
+  pairs_per_key: 32
+  steps: 3000
+  lr: 0.001
+  weight_decay: 0.01
+  log_every: 50
+  eval_every: 250
+  eval_keys: 64
+  eval_pairs: 64
+  seed: 0
+  device: auto

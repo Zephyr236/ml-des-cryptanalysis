@@ -88,7 +88,7 @@ def split_of(keys: torch.Tensor) -> torch.Tensor:
 def blocks_to_planes(blocks: torch.Tensor) -> torch.Tensor:
     """(B,) int64 blocks -> (B, 64) float32 bit planes, MSB first."""
     shifts = torch.arange(63, -1, -1, device=blocks.device)
-    return ((blocks.unsqueeze(1) >> shifts) & 1).float()
+    return ((blocks.unsqueeze(-1) >> shifts) & 1).float()
 
 
 @dataclass
