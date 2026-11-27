@@ -203,7 +203,7 @@ result establishes that the learning pipeline is real at 2 rounds.
   FIPS vector `0x85E813540F0AB405`, and the recovered key re-encrypts
   the target's verification blocks. The exact 2-round DDT baseline
   remains 0.0 even with the audited delta `0x0000040000000000`
-  (`results/stage2/20261127T005020Z-3f...`), so the earlier "AI beats
+  (`results/stage2/20261127T030500Z-c389cf93-ec33fa11-s0`), so the earlier "AI beats
   DDT" framing is withdrawn until the counter is independently tested;
   the 2-round neural recovery itself is unaffected. The **48,896** tried candidates are
   `191 x 256`: the product loop enumerates 256 round-key combinations
