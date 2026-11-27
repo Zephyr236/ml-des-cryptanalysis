@@ -1,0 +1,24 @@
+run_name: distinguisher-des5
+rounds: 5
+mode: cpa
+delta: 0x0000001010000000
+
+model:
+  name: pair_cnn
+  channels: 64
+  blocks: 4
+  dropout: 0.1
+
+train:
+  batch_size: 256
+  steps: 1200
+  lr: 0.001
+  weight_decay: 0.01
+  log_every: 50
+  eval_every: 100
+  eval_batches: 16
+  seed: 0
+  device: cpu
+
+data:
+  negative_fraction: 0.5
