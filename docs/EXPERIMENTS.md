@@ -201,7 +201,17 @@ result establishes that the learning pipeline is real at 2 rounds.
   `20261126T171750Z-0b60a9d9-52394cf1-s0`, `recovered=1`). This is
   parity-equivalent to the target `0x133457799BBCDFF1`: both give the
   FIPS vector `0x85E813540F0AB405`, and the recovered key re-encrypts
-  the target's verification blocks.  The recovery used four fresh
+  the target's verification blocks. The exact 2-round DDT baseline
+  remains 0.0 even with the audited delta `0x0000040000000000`
+  (`results/stage2/20261127T005020Z-3f...`), so the earlier "AI beats
+  DDT" framing is withdrawn until the counter is independently tested;
+  the 2-round neural recovery itself is unaffected. The **48,896** tried candidates are
+  `191 x 256`: the product loop enumerates 256 round-key combinations
+  and 256 schedule completions per combination, and the run broke on
+  the 192nd combination, so the remaining 65 were never enumerated; the
+  per-box ranks and tied dual candidates are persisted in
+  `results/stage2/20261126T165820Z-9d233012-7f919ef3-s0/scores.json`
+  (`details.ranks` and `details.filtered`).  The recovery used four fresh
   random verification blocks; the key is unique up to the eight DES
   parity bits.  Compute: 323M chosen pairs, 1116 s data generation,
   48,896 candidate master keys (256 combinations × 256 completions),
