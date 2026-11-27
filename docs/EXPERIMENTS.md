@@ -214,8 +214,8 @@ result establishes that the learning pipeline is real at 2 rounds.
   (`details.ranks` and `details.filtered`).  The recovery used four fresh
   random verification blocks; the key is unique up to the eight DES
   parity bits.  Compute: 323M chosen pairs, 1116 s data generation,
-  48,896 candidate master keys (256 combinations × 256 completions),
-  one RTX 2060.  The top-2 protocol is fixed for the statistic, not chosen per key:
+  48,896 candidates = 191 enumerated combinations × 256 schedule
+  completions (the run broke on the 192nd combination), one RTX 2060.  The top-2 protocol is fixed for the statistic, not chosen per key:
   for a fixed S-box input difference `a`, candidates `k` and `k xor a`
   swap the two S-box inputs and produce the same output difference, so
   every true chunk has exactly one algebraic dual at rank 1.5.  Top-1
